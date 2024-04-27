@@ -1,0 +1,9 @@
+[project]
+name = "libale"
+version = "0.1"
+description = "Python library for parsing ALE (Avid Log Exchange) files"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
