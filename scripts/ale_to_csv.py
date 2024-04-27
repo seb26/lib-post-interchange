@@ -77,7 +77,7 @@ def parse(items: list, maps: list = None):
         logger.debug(f'Mapping: {map}')
         user_mapped_columns = True
     logger.debug(f'Input items: {items}')
-    ale_files = list(get_ale_filepaths(items, recurse=True))
+    ale_files = list( get_ale_filepaths(items, recurse=True) )
     ale_files.sort()
 
     entries = []
@@ -117,17 +117,17 @@ def write_csv(file_target, entries: list, columns: list):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('items', help='folders or ALE files')
-    parser.add_argument('--map', help='map of ALE column names to CSV column names', nargs='+', action='append')
+    parser.add_argument('items', help='folders or ALE files', nargs='+', action='append')
+    parser.add_argument('--map', help='map of ALE column names to CSV column names. Format is ale_col:csv_col, space separated. Escape spaces in the column names with a backslash or quotes. Example: Name:name_csv "Start:Start TC"', nargs='+', action='append')
     parser.add_argument('--debug', help='include debug output', action='store_true', default=False)
-    parser.add_argument('-o', help='output to CSV file, otherwise prints to stdout', required=False)
+    parser.add_argument('-o', help='output to CSV file, otherwise prints to stdout', type=str, required=False)
     args = parser.parse_args()
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
 
     # Parse
-    entries, columns = parse(args.items, args.map)
+    entries, columns = parse(args.items[0], args.map)
 
     # Output
     if args.o:
