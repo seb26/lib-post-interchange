@@ -16,7 +16,7 @@ def get_ale_filepaths(
     input: Union[str, Iterable],
     allow_all: bool = False,
     recurse: bool = False,
-) -> Generator:
+) -> Generator[Path, None, None]:
     """
     Return Path()s of files and folders that are recognised media files, determined by file extension
 
@@ -48,34 +48,44 @@ def get_ale_filepaths(
             filepath = Path(input_item)
             yield from _iterate(filepath)
 
-def parse(items: list, maps: list = None):
-    def _build() -> Generator:
-        for ale_column, csv_column in map.items():
-            key = map.get(ale_column)
-            value = clip.get(ale_column)
-            if key and value:
+def parse(items: list, user_map: list = None):
+    def _build(clip: dict, mappings: list[dict]) -> Generator:
+        for mapping in mappings:
+            ale_col = mapping.get('ale_col')
+            csv_col = mapping.get('csv_col')
+            value = clip.get(ale_col)
+            if csv_col and value:
                 # Good column name and good value
-                yield key, value
-            elif key and not value:
+                yield csv_col, value
+            elif csv_col and not value:
                 # Good column name but no result in the source
-                yield key, None
+                yield csv_col, None
             else:
-                logger.debug(f'Skipped - ALE Col: {ale_column} - CSV Col: {csv_column} - Key: {key}: Value: {value}')
-    map = {}
+                logger.debug(f'Skipped during mapping - ALE Col: {ale_col} - CSV Col: {csv_col} - Value: {value}')
+
+    mappings = []
     user_mapped_columns = False
-    if maps:
-        logger.debug(f'Input mapping: {maps}')
-        for index, map_item in enumerate(maps[0]):
+    if user_map:
+        user_mapped_columns = True
+        logger.debug(f'Input mapping: {user_map}')
+        for index, mapping_raw in enumerate(user_map):
             try:
-                key, value = map_item.split(':')
-                map[key] = value
+                ale_col, csv_col = mapping_raw.split(':')
+                mappings.append(
+                    dict(
+                        ale_col = ale_col,
+                        csv_col = csv_col,
+                    )
+                )
             except (
                 ValueError,
                 AttributeError,
             ) as e:
-                raise Exception(f'Error interpreting this map item #{index + 1}: {map_item}. Ensure it is using the syntax: ALEColumnName:CSVColumnName')
-        logger.debug(f'Mapping: {map}')
-        user_mapped_columns = True
+                raise Exception(f'Error interpreting this map item #{index + 1}: {mapping_raw}. Ensure it is using the syntax: ALEColumnName:CSVColumnName')
+    if not user_map:
+        # Map will be created during ALE parsing
+        pass
+    logger.debug(f'Mappings: {mappings}')
     logger.debug(f'Input items: {items}')
     ale_files = list( get_ale_filepaths(items, recurse=True) )
     ale_files.sort()
@@ -87,20 +97,19 @@ def parse(items: list, maps: list = None):
             ale = ALELib.parse(f.read())
             if user_mapped_columns is False:
                 # If no user map specified, pass all ALE columns through to the CSV unaltered
-                map.update(
-                    **{ col: col for col in ale.columns }
-                )
+                mappings_for_this_ale = [ { 'ale_col': col, 'csv_col': col } for col in ale.columns ]
+                mappings.extend(mappings_for_this_ale)
             for index, clip in enumerate(ale.clips):
                 # Look up the values per column
                 try:
-                    subtable = dict( _build() )
+                    subtable = dict( _build(clip, mappings) )
                 except Exception as e:
-                    logger.debug(f'Exception {type(e)} on Clip #{index + 1}')
+                    logger.debug(f'Exception {type(e)} on ALE file {str(ale_file)}: Clip #{index + 1}')
                     logger.debug(e, exc_info=1)
                     continue
                 entries.append(subtable)
     # Process columns
-    columns = list(map.values())
+    columns = [ mapping['csv_col'] for mapping in mappings ]
     logger.debug(f'Columns: {columns}')
     return entries, columns
 
@@ -127,7 +136,8 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
 
     # Parse
-    entries, columns = parse(args.items[0], args.map)
+    # args.items and args.map are returned as double lists - work around this with first index only
+    entries, columns = parse(args.items[0], args.map[0])
 
     # Output
     if args.o:
