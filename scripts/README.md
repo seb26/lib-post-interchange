@@ -34,7 +34,7 @@ A001C001_240426_R1AA,A001C001_240426_R1AA.mxf,C001,00:00:29:06,V,03:44:36:21,03:
 2. Written to specified file instead.
 
 ```bash
-python scripts/ale_to_csv.py samples/A901R1AA_AVID.ale --o test_output.csv
+python scripts/ale_to_csv.py samples/A901R1AA_AVID.ale -o test_output.csv
 ```
 
 <br />
