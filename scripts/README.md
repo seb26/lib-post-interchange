@@ -17,8 +17,14 @@ options:
   -o                   output to CSV file, otherwise prints to stdout
 ```
 
+### Notes
+
+- The content of multiple ALE files is output to a single, continuous CSV. To route multiple ALEs each to a single CSV, just run `ale_to_csv.py` multiple times each time specifying only one ALE file. 
+
 ## Examples
-1. Basic import of one ALE file, with output sent to stdout.
+### Basic import
+
+One ALE file in, and CSV output sent to stdout.
 
 ```bash
 python scripts/ale_to_csv.py samples/A901R1AA_AVID.ale
@@ -31,7 +37,7 @@ A001C001_240426_R1AA,A001C001_240426_R1AA.mxf,C001,00:00:29:06,V,03:44:36:21,03:
 
 <br />
 
-2. Written to specified file instead.
+### Output to a file
 
 ```bash
 python scripts/ale_to_csv.py samples/A901R1AA_AVID.ale -o test_output.csv
@@ -39,9 +45,15 @@ python scripts/ale_to_csv.py samples/A901R1AA_AVID.ale -o test_output.csv
 
 <br />
 
-3. Import of a whole folder of ALE files, with user-specified mapping of ALE columns to CSV columns. Two ways to escape spaces in column names are shown.
+### User column mapping
 
-Useful to determine new columns names that are tailored for the receiving program.
+User-specified mapping of ALE columns to CSV columns is shown. Useful to include only specific columns, and to determine new columns names that are tailored for the receiving program. 
+
+The format is:
+
+```--map ALECol:CSVCol```
+
+There are two ways escape spaces in column names - either quote it or escape the backspace. 
 
 ```bash
 python scripts/ale_to_csv.py samples/ --map "Name:Reel Name" Look_name:LUT\ Used
