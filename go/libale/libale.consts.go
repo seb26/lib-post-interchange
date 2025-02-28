@@ -12,31 +12,6 @@ const ALEDataWord = "Data"
 // ALEHeadingWordPattern represents regexp for this section
 const ALEHeadingWordPattern = `(?ms)^Heading(\r?\n|\r)(?P<fields>.*)(\r?\n|\r)(\r?\n|\r)Column(\r?\n|\r)(?P<columns>.*)(\r?\n|\r)(\r?\n|\r)Data$`
 
-// ToType returns a function that creates an ALEHeaderField instance
-func ToType(key string) (func(string) ALEHeaderField, error) {
-	switch key {
-	case "FIELD_DELIM":
-		return func(value string) ALEHeaderField {
-			return NewALEFieldDelimiter(value).ALEHeaderField
-		}, nil
-	case "VIDEO_FORMAT":
-		return func(value string) ALEHeaderField {
-			return NewALEVideoFormat(value).ALEHeaderField
-		}, nil
-	case "AUDIO_FORMAT":
-		return func(value string) ALEHeaderField {
-			return NewALEAudioFormat(value).ALEHeaderField
-		}, nil
-	case "FPS":
-		return func(value string) ALEHeaderField {
-			return NewALEFrameRate(value).ALEHeaderField
-		}, nil
-	default:
-		return func(value string) ALEHeaderField {
-			return ALEHeaderField{Key: key, Value: value}
-		}, nil
-	}
-}
 
 // String returns the string value
 func (fd ALEFieldDelimiter) String() string {
