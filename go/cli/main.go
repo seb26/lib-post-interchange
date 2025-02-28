@@ -12,8 +12,8 @@ func main() {
 		fmt.Println("cli: Please provide a file path as first argument")
 		return
 	}
-	inputFile := fmt.Sprintf("%s", os.Args[1])
-	fmt.Printf("cli: Input file:", inputFile)
+	inputFile := os.Args[1]
+	fmt.Printf("cli: Input file: %s", inputFile)
 	ale, err := libale.ReadFile(inputFile)
 	if err != nil {
 		panic(err)
