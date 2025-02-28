@@ -39,6 +39,22 @@ func ToType(key string) (func(string) ALEHeaderField, error) {
 	}
 }
 
+// AssignHeaderFieldsToObject() assigns the header fields to the outside
+// of the ALE object.
+func AssignHeaderFieldsToObject(ale ALEObject) ALEObject {
+	for _, field := range ale.HeaderFields {
+		switch field.Key {
+		case "FPS":
+			ale.FPS = ALEFrameRate{ALEHeaderField: field}
+		case "AUDIO_FORMAT":
+			ale.AudioFormat = ALEAudioFormat{ALEHeaderField: field}
+		case "VIDEO_FORMAT":
+			ale.VideoFormat = ALEVideoFormat{ALEHeaderField: field}
+		}
+	}
+	return ale
+}
+
 // NewALEFieldDelimiter creates a new ALEFieldDelimiter with the Key set to "FIELD_DELIM"
 func NewALEFieldDelimiter(value string) ALEFieldDelimiter {
 	return ALEFieldDelimiter{
@@ -141,7 +157,7 @@ type ALEObject struct {
 	HeaderFields []ALEHeaderField
 	VideoFormat  ALEVideoFormat
 	AudioFormat  ALEAudioFormat
-	Framerate    ALEFrameRate
+	FPS          ALEFrameRate
 	Columns      []ALEColumn
 	Rows         []ALERow
 }

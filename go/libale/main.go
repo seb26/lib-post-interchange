@@ -18,35 +18,36 @@ type ALE interface {
 }
 
 // ReadFile() takes an input filepath, reads it and calls Read() to return an ALE object
-func ReadFile(filepath string) (int, error) {
+func ReadFile(filepath string) (*ALEObject, error) {
 	_, err := os.Stat(filepath)
 	if os.IsNotExist(err) {
-		return 0, err
+		return nil, err
 	}
 	data, err := os.ReadFile(filepath)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	dataString := string(data)
 	return Read(dataString)
 }
 
-func Read(input string) (int, error) {
-	_, _, _, err := read(input)
+func Read(input string) (*ALEObject, error) {
+	aleHeaderFields, aleColumns, aleRows, err := read(input)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	//ale := &ALEObject{
-	//	HeaderFields: aleHeaderFields,
-	//	Columns:      aleColumns,
-	//	Rows:         aleRows,
-	//}
-	//newAle := ALE(ale)
-	return 0, nil
+	ale := ALEObject{
+		HeaderFields: aleHeaderFields,
+		Columns:      aleColumns,
+		Rows:         aleRows,
+	}
+	ale = AssignHeaderFieldsToObject(ale)
+	return &ale, nil
 }
 
-func read(input string) (*[]ALEHeaderField, *[]ALEColumn, *[]ALERow, error) {
+func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
 	var columns []ALEColumn
+	var headerFields []ALEHeaderField
 
 	// Find the ALE header
 	pattern := regexp.MustCompile(ALEHeadingWordPattern)
@@ -69,14 +70,10 @@ func read(input string) (*[]ALEHeaderField, *[]ALEColumn, *[]ALERow, error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	var fieldsMap = make(map[string]string)
-	// Map these header fields as plain strings
+	// Interpret an array per line of fields, where [key, value]
 	for _, field := range fieldsArray {
-		fieldsMap[field[0]] = field[1]
-	}
-	// Interpret
-	var headerFields []ALEHeaderField
-	for key, value := range fieldsMap {
+		key := field[0]
+		value := field[1]
 		constructor, err := ToType(key)
 		if err != nil {
 			return nil, nil, nil, err
@@ -90,10 +87,10 @@ func read(input string) (*[]ALEHeaderField, *[]ALEColumn, *[]ALERow, error) {
 		return nil, nil, nil, err
 	}
 	for index, column := range columnsArray {
-		columns = append(columns, *makeALEColumn(column, index))
+		columns = append(columns, makeALEColumn(column, index))
 	}
 	fmt.Println("Columns:", columns)
-	return &headerFields, &columns, nil, nil
+	return headerFields, columns, nil, nil
 }
 
 // GetHeader() returns the header fields of the ALE object
@@ -134,8 +131,8 @@ func readTSVDataFirstLine(input string) ([]string, error) {
 }
 
 // makeALEColumn() takes a string input and returns an ALEColumn object
-func makeALEColumn(input string, order int) *ALEColumn {
-	return &ALEColumn{Name: input, Order: order}
+func makeALEColumn(input string, order int) ALEColumn {
+	return ALEColumn{Name: input, Order: order}
 }
 
 // makeALEValue() takes a string input and returns an ALEBaseValue object
