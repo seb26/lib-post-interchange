@@ -9,8 +9,9 @@ const ALEColumnWord = "Column"
 // ALEDataWord represents the data heading in the ALE file
 const ALEDataWord = "Data"
 
-// ALEHeadingWordPattern represents regexp for this section
-const ALEHeadingWordPattern = `(?ms)^Heading(\r?\n|\r)(?P<fields>.*)(\r?\n|\r)(\r?\n|\r)Column(\r?\n|\r)(?P<columns>.*)(\r?\n|\r)(\r?\n|\r)Data$`
+// ALEHeadingWordPattern represents regexp from beginning of file
+// to the end of the Data section including subsequent blank line.
+const ALEHeadingWordPattern = `(?ms)^Heading(\r?\n|\r)(?P<fields>.*)(\r?\n|\r)(\r?\n|\r)Column(\r?\n|\r)(?P<columns>.*)(\r?\n|\r)(\r?\n|\r)(?P<data_header>Data)$`
 
 // ALE video formats
 //const (

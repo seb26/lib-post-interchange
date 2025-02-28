@@ -52,20 +52,18 @@ func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
 	// Find the ALE header
 	pattern := regexp.MustCompile(ALEHeadingWordPattern)
 	match := pattern.FindStringSubmatchIndex(input)
-
 	if match == nil {
 		return nil, nil, nil, fmt.Errorf("unrecognised ALE header")
 	}
-
 	// Find the index positions for 'fields' and 'columns'
 	fieldsId := pattern.SubexpIndex("fields")
 	columnsId := pattern.SubexpIndex("columns")
-
+	dataHeaderId := pattern.SubexpIndex("data_header")
 	fieldsStart, fieldsEnd := match[2*fieldsId], match[2*fieldsId+1]
 	fieldsList := input[fieldsStart:fieldsEnd]
 	columnsStart, columnsEnd := match[2*columnsId], match[2*columnsId+1]
 	columnsList := input[columnsStart:columnsEnd]
-
+	dataHeaderEnd := match[2*dataHeaderId+1]
 	fieldsArray, err := readTSVData(fieldsList)
 	if err != nil {
 		return nil, nil, nil, err
@@ -80,7 +78,6 @@ func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
 		}
 		headerFields = append(headerFields, constructor(value))
 	}
-
 	// Parse columns
 	columnsArray, err := readTSVDataFirstLine(columnsList)
 	if err != nil {
@@ -89,8 +86,14 @@ func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
 	for index, column := range columnsArray {
 		columns = append(columns, makeALEColumn(column, index))
 	}
-	fmt.Println("Columns:", columns)
-	return headerFields, columns, nil, nil
+	// Parse data
+	data := strings.TrimSpace(input[dataHeaderEnd:])
+	dataRows, err := readTSVData(data)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	rows := makeALERowsFromDataRows(dataRows, columns)
+	return headerFields, columns, rows, nil
 }
 
 // GetHeader() returns the header fields of the ALE object
@@ -131,13 +134,35 @@ func readTSVDataFirstLine(input string) ([]string, error) {
 }
 
 // makeALEColumn() takes a string input and returns an ALEColumn object
-func makeALEColumn(input string, order int) ALEColumn {
-	return ALEColumn{Name: input, Order: order}
+func makeALEColumn(name string, order int) ALEColumn {
+	return ALEColumn{Name: name, Order: order}
 }
 
 // makeALEValue() takes a string input and returns an ALEBaseValue object
-func makeALEValue(input string) ALEValueString {
-	return ALEValueString{Value: input}
+func makeALEValue(column ALEColumn, value string) ALEValueString {
+	return ALEValueString{Column: column, Value: value}
 }
 
-// makeALERow() takes a string input and returns an ALERow object
+// makeALERow() takes an array of row values, and an array of columns, and returns an ALERow object
+func makeALERow(row []string, columns []ALEColumn) ALERow {
+	var aleRow ALERow
+	aleRow.Columns = columns
+	aleRow.ValueMap = make(map[ALEColumn]ALEValueString) // Initialize the map
+	for cell_index, value := range row {
+		column := columns[cell_index]
+		aleValue := makeALEValue(column, value)
+		aleRow.ValueMap[column] = aleValue
+	}
+	return aleRow
+}
+
+// makeALERowsFromData() takes a 2D array of strings and returns a slice of ALERow objects
+func makeALERowsFromDataRows(rows [][]string, columns []ALEColumn) []ALERow {
+	var aleRows []ALERow
+	for row_index, row := range rows {
+		aleRow := makeALERow(row, columns)
+		aleRow.Order = row_index
+		aleRows = append(aleRows, aleRow)
+	}
+	return aleRows
+}
