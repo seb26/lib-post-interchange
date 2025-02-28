@@ -44,6 +44,8 @@ func ToType(key string) (func(string) ALEHeaderField, error) {
 func AssignHeaderFieldsToObject(ale ALEObject) ALEObject {
 	for _, field := range ale.HeaderFields {
 		switch field.Key {
+		case "FIELD_DELIM":
+			ale.FieldDelimiter = ALEFieldDelimiter{ALEHeaderField: field}
 		case "FPS":
 			ale.FPS = ALEFrameRate{ALEHeaderField: field}
 		case "AUDIO_FORMAT":
@@ -119,18 +121,12 @@ type ALEColumn struct {
 // ALERow represents a row in the ALE data table
 type ALERow struct {
 	Columns  []ALEColumn
-	ValueMap map[ALEColumn]ALEBaseValue
+	ValueMap map[ALEColumn]ALEValueString
 	Order    int
-}
-
-// ALEBaseValue represents a base value
-type ALEBaseValue interface {
-	String() string
 }
 
 // ALEValueString represents a string value
 type ALEValueString struct {
-	ALEBaseValue
 	Column ALEColumn
 	Value  string
 }
@@ -142,7 +138,6 @@ func (v ALEValueString) String() string {
 
 // ALEValueInt represents an int value
 type ALEValueInt struct {
-	ALEBaseValue
 	Column ALEColumn
 	Value  int
 }
@@ -154,10 +149,17 @@ func (v ALEValueInt) String() string {
 
 // ALEObject is a structured representation of an Avid Log Exchange file
 type ALEObject struct {
-	HeaderFields []ALEHeaderField
-	VideoFormat  ALEVideoFormat
-	AudioFormat  ALEAudioFormat
-	FPS          ALEFrameRate
-	Columns      []ALEColumn
-	Rows         []ALERow
+	HeaderFields   []ALEHeaderField
+	FieldDelimiter ALEFieldDelimiter
+	VideoFormat    ALEVideoFormat
+	AudioFormat    ALEAudioFormat
+	FPS            ALEFrameRate
+	Columns        []ALEColumn
+	Rows           []ALERow
+}
+
+// String returns the string representation of the ALEObject
+func (ale ALEObject) String() string {
+	return fmt.Sprintf("ALEObject{HeaderFields: %v, FieldDelimiter: %v, VideoFormat: %v, AudioFormat: %v, FPS: %v, Columns: %v, Rows: %v}",
+		ale.HeaderFields, ale.FieldDelimiter, ale.VideoFormat, ale.AudioFormat, ale.FPS, len(ale.Columns), len(ale.Rows))
 }
