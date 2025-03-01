@@ -64,8 +64,9 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	}
 
 	// Parse header fields by splitting each line on first tab
-	headerLines := strings.Split(strings.TrimSpace(headerData.String()), "\n")
+	headerLines := strings.Split(strings.TrimRight(headerData.String(), "\r\n"), "\n")
 	for _, line := range headerLines {
+		line = strings.TrimRight(line, "\r") // Handle any remaining \r in CRLF files
 		parts := strings.SplitN(line, "\t", 2)
 		if len(parts) != 2 {
 			continue // Skip malformed lines
@@ -83,57 +84,64 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 		return nil, nil, nil, ErrSectionMissingColumn
 	}
 
-	// Read column names
-	if !scanner.Scan() {
-		return nil, nil, nil, ErrSectionIncompleteColumn
-	}
-	columnsLine := scanner.Text()
-	if columnsLine == "" {
-		return nil, nil, nil, ErrParseEmptyInput.WithContext("no column data provided")
-	}
-	columnsArray, err := readTSVDataFirstLine(columnsLine)
-	if err != nil {
-		if _, ok := err.(*Error); ok {
-			return nil, nil, nil, err // Pass through our custom errors
-		}
-		return nil, nil, nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
-	}
-	for index, column := range columnsArray {
-		columns = append(columns, makeColumn(column, index))
-	}
-
-	// Skip empty line (but don't require it)
-	if scanner.Scan() && scanner.Text() != "" {
-		return nil, nil, nil, ErrFormatMalformedColumn
-	}
-
-	// Next line should be "Data"
-	if !scanner.Scan() || scanner.Text() != format.Data {
-		return nil, nil, nil, ErrSectionMissingData
-	}
-
-	// Read all data rows
-	var dataBuilder strings.Builder
+	// Skip any empty lines before column names
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
 			continue
 		}
-		dataBuilder.WriteString(line + "\n")
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, nil, nil, ErrParseFailedContent.WithContext(fmt.Sprintf("scanner error: %v", err))
-	}
-
-	// Parse data rows
-	dataRows, err := readTSVData(dataBuilder.String())
-	if err != nil {
-		if _, ok := err.(*Error); ok {
-			return nil, nil, nil, err // Pass through our custom errors
+		columnsLine := line
+		if columnsLine == format.Data {
+			return nil, nil, nil, ErrSectionIncompleteColumn
 		}
-		return nil, nil, nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
+		columnsArray, err := readTSVDataFirstLine(columnsLine)
+		if err != nil {
+			if _, ok := err.(*Error); ok {
+				return nil, nil, nil, err // Pass through our custom errors
+			}
+			return nil, nil, nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
+		}
+		for index, column := range columnsArray {
+			columns = append(columns, makeColumn(column, index))
+		}
+		break
 	}
+
+	if len(columns) == 0 {
+		return nil, nil, nil, ErrSectionIncompleteColumn
+	}
+
+	// Skip empty lines until we find "Data" or data content
+	foundData := false
+	var dataRows [][]string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		if line == format.Data {
+			foundData = true
+			continue
+		}
+		if !foundData {
+			return nil, nil, nil, ErrSectionMissingData
+		}
+
+		// Parse data row
+		dataRow, err := readTSVDataFirstLine(line)
+		if err != nil {
+			if _, ok := err.(*Error); ok {
+				return nil, nil, nil, err // Pass through our custom errors
+			}
+			return nil, nil, nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
+		}
+		dataRows = append(dataRows, dataRow)
+	}
+
+	if !foundData || len(dataRows) == 0 {
+		return nil, nil, nil, ErrSectionMissingData
+	}
+
 	rows, err := makeRowsFromDataRows(dataRows, columns)
 	if err != nil {
 		return nil, nil, nil, err
@@ -189,15 +197,13 @@ func makeRow(row []string, columns []types.Column) types.Row {
 	aleRow.Columns = columns
 	aleRow.ValueMap = make(map[types.Column]types.Value)
 
-	// Only process up to the minimum of row length and columns length
-	maxCells := len(row)
-	if len(columns) < maxCells {
-		maxCells = len(columns)
-	}
-
-	for cellIndex := 0; cellIndex < maxCells; cellIndex++ {
-		column := columns[cellIndex]
-		aleValue := makeValue(column, row[cellIndex])
+	// Process all columns, padding with empty strings if row is too short
+	for i, column := range columns {
+		value := ""
+		if i < len(row) {
+			value = row[i]
+		}
+		aleValue := makeValue(column, value)
 		aleRow.ValueMap[column] = aleValue
 	}
 	return aleRow
@@ -207,9 +213,10 @@ func makeRow(row []string, columns []types.Column) types.Row {
 func makeRowsFromDataRows(rows [][]string, columns []types.Column) ([]types.Row, error) {
 	var aleRows []types.Row
 	for rowIndex, row := range rows {
-		// Validate row length matches column count
-		if len(row) != len(columns) {
-			return nil, ErrParseMismatchedColumns.WithContext(fmt.Sprintf("row %d has %d columns, expected %d", rowIndex, len(row), len(columns)))
+		// Warn if row has more columns than defined
+		if len(row) > len(columns) {
+			fmt.Printf("Warning: row %d has %d columns, expected %d (extra columns will be ignored)\n",
+				rowIndex, len(row), len(columns))
 		}
 		aleRow := makeRow(row, columns)
 		aleRow.Order = rowIndex
