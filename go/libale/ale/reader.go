@@ -3,6 +3,7 @@ package ale
 import (
 	"bufio"
 	"encoding/csv"
+	"fmt"
 	"os"
 	"strings"
 
@@ -62,18 +63,18 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 		headerData.WriteString(line + "\n")
 	}
 
-	// Parse header fields
-	fieldsArray, err := readTSVData(headerData.String())
-	if err != nil {
-		return nil, nil, nil, ErrParseFailedHeader
-	}
-	for _, field := range fieldsArray {
-		if len(field) != 2 {
-			continue
+	// Parse header fields by splitting each line on first tab
+	headerLines := strings.Split(strings.TrimSpace(headerData.String()), "\n")
+	for _, line := range headerLines {
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
+			continue // Skip malformed lines
 		}
+		key := parts[0]
+		value := strings.ReplaceAll(parts[1], "\t", " ") // Replace any tabs in value with spaces
 		headerFields = append(headerFields, types.BaseField{
-			Key:   field[0],
-			Value: field[1],
+			Key:   key,
+			Value: value,
 		})
 	}
 
