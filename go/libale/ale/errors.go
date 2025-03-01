@@ -11,7 +11,6 @@ const (
 	CategoryParse
 	CategoryFormat
 	CategoryField
-	CategoryValue
 )
 
 // Section error subcategories
@@ -40,13 +39,6 @@ const (
 	FieldMissing = iota
 	FieldInvalid
 	FieldDuplicate
-)
-
-// Value error subcategories
-const (
-	ValueInvalid = iota
-	ValueOutOfRange
-	ValueUnsupported
 )
 
 // Error represents the base error type for all ALE-related errors

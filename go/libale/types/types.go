@@ -2,8 +2,11 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"lib-post-interchange/libale/validate"
 )
 
 // Field defines the common behavior for all ALE field types.
@@ -84,6 +87,95 @@ type Object struct {
 	Tape           Tape
 	Columns        []Column
 	Rows           []Row
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (o Object) MarshalJSON() ([]byte, error) {
+	// Validate required fields
+	if o.Columns == nil {
+		return nil, validate.ErrValueNilColumns
+	}
+	if o.Rows == nil {
+		return nil, validate.ErrValueNilRows
+	}
+
+	type jsonObject struct {
+		HeaderFields   []map[string]string `json:"header_fields,omitempty"`
+		FieldDelimiter string              `json:"field_delimiter,omitempty"`
+		VideoFormat    string              `json:"video_format,omitempty"`
+		AudioFormat    string              `json:"audio_format,omitempty"`
+		FPS            string              `json:"fps,omitempty"`
+		FilmFormat     string              `json:"film_format,omitempty"`
+		Tape           string              `json:"tape,omitempty"`
+		Columns        []string            `json:"columns,omitempty"`
+		Data           []map[string]string `json:"data,omitempty"`
+	}
+
+	// Convert header fields to map
+	headerFields := make([]map[string]string, 0, len(o.HeaderFields))
+	for _, field := range o.HeaderFields {
+		if field == nil {
+			continue // Skip nil fields
+		}
+		headerFields = append(headerFields, map[string]string{
+			"key":   field.GetKey(),
+			"value": field.GetValue(),
+		})
+	}
+
+	// Convert columns to string slice
+	columns := make([]string, len(o.Columns))
+	for i, col := range o.Columns {
+		if col.Name == "" {
+			return nil, validate.ErrValueEmptyColumnName
+		}
+		columns[i] = col.Name
+	}
+
+	// Convert rows to map slice
+	data := make([]map[string]string, len(o.Rows))
+	for i, row := range o.Rows {
+		if row.ValueMap == nil {
+			return nil, validate.ErrValueNilRowMap
+		}
+		rowData := make(map[string]string)
+		for col, val := range row.ValueMap {
+			if val == nil {
+				continue // Skip nil values
+			}
+			rowData[col.Name] = val.String()
+		}
+		data[i] = rowData
+	}
+
+	// Create JSON object
+	obj := jsonObject{
+		HeaderFields: headerFields,
+		Columns:      columns,
+		Data:         data,
+	}
+
+	// Add optional fields only if they have valid values
+	if v := o.FieldDelimiter.GetValue(); v != "" {
+		obj.FieldDelimiter = v
+	}
+	if v := o.VideoFormat.GetValue(); v != "" {
+		obj.VideoFormat = v
+	}
+	if v := o.AudioFormat.GetValue(); v != "" {
+		obj.AudioFormat = v
+	}
+	if v := o.FPS.GetValue(); v != "" {
+		obj.FPS = v
+	}
+	if v := o.FilmFormat.GetValue(); v != "" {
+		obj.FilmFormat = v
+	}
+	if v := o.Tape.GetValue(); v != "" {
+		obj.Tape = v
+	}
+
+	return json.Marshal(obj)
 }
 
 // String returns a string representation of the Object.
