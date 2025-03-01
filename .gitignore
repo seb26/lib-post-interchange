@@ -1,8 +1,30 @@
+# python
+*.py[cod]
+*$py.class
 __pycache__/
-.DS_Store
+*.so
+build/
+dist/
+*.egg-info/
+.env
+venv/
+.pytest_cache/
+.coverage
+*.log
+
+# golang
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# vscode
 .history/
-.venv/
-.vscode/
-*.egg-info
-*.DS_Store
-node_modules/
+
+# binaries
+go/cli/cli
+go/main
