@@ -9,10 +9,6 @@ const ALEColumnWord = "Column"
 // ALEDataWord represents the data heading in the ALE file
 const ALEDataWord = "Data"
 
-// ALEHeadingWordPattern represents regexp from beginning of file
-// to the end of the Data section including subsequent blank line.
-const ALEHeadingWordPattern = `(?ms)^Heading(\r?\n|\r)(?P<fields>.*)(\r?\n|\r)(\r?\n|\r)Column(\r?\n|\r)(?P<columns>.*)(\r?\n|\r)(\r?\n|\r)(?P<data_header>Data)$`
-
 // Predefined frame rates
 // TODO - DROPFRAMES
 var (
@@ -37,12 +33,12 @@ var (
 
 // Predefined audio formats
 var (
-	AudioFormatPCM48   = ALEAudioFormat{Key: "AUDIO_FORMAT", Value: "48kHz"}
+	AudioFormatPCM48 = ALEAudioFormat{Key: "AUDIO_FORMAT", Value: "48kHz"}
 )
 
 // Predefined field delimiters
 var (
-	FieldDelimiterTab   = ALEFieldDelimiter{Key: "FIELD_DELIM", Value: "TABS"}
+	FieldDelimiterTab = ALEFieldDelimiter{Key: "FIELD_DELIM", Value: "TABS"}
 )
 
 // Predefined film formats
