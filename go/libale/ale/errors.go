@@ -41,92 +41,76 @@ const (
 	FieldDuplicate
 )
 
-// Error represents the base error type for all ALE-related errors
+// Error represents an ALE parsing error.
 type Error struct {
-	Category    ErrorCategory
-	SubCategory int32
-	Message     string
+	Line    int
+	Message string
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("ale: [%d.%d] %s", e.Category, e.SubCategory, e.Message)
+	return fmt.Sprintf("ale: [%d.0] %s", e.Line, e.Message)
 }
 
 // Code returns the unique error code
 func (e *Error) Code() int32 {
-	return int32(e.Category)*1000 + e.SubCategory
+	return int32(e.Line)
 }
 
-// Section errors
+// Error definitions for ALE parsing
 var (
+	// Section errors
 	ErrSectionMissingHeading = &Error{
-		Category:    CategorySection,
-		SubCategory: SectionMissing,
-		Message:     "missing Heading section",
+		Line:    1,
+		Message: "missing 'Heading' section",
 	}
 	ErrSectionMissingColumn = &Error{
-		Category:    CategorySection,
-		SubCategory: SectionMissing,
-		Message:     "missing Column section",
+		Line:    2,
+		Message: "missing 'Column' section",
 	}
 	ErrSectionMissingData = &Error{
-		Category:    CategorySection,
-		SubCategory: SectionMissing,
-		Message:     "missing Data section",
+		Line:    3,
+		Message: "missing 'Data' section",
 	}
 	ErrSectionIncompleteColumn = &Error{
-		Category:    CategorySection,
-		SubCategory: SectionIncomplete,
-		Message:     "missing column names",
+		Line:    2,
+		Message: "incomplete 'Column' section",
 	}
-)
 
-// Parse errors
-var (
+	// Format errors
+	ErrFormatMalformedColumn = &Error{
+		Line:    2,
+		Message: "malformed column section",
+	}
+
+	// Parse errors
 	ErrParseFailedHeader = &Error{
-		Category:    CategoryParse,
-		SubCategory: ParseFailed,
-		Message:     "failed to parse header fields",
+		Line:    2,
+		Message: "failed to parse header fields",
 	}
 	ErrParseFailedColumns = &Error{
-		Category:    CategoryParse,
-		SubCategory: ParseFailed,
-		Message:     "failed to parse columns",
+		Line:    2,
+		Message: "failed to parse columns",
 	}
 	ErrParseFailedData = &Error{
-		Category:    CategoryParse,
-		SubCategory: ParseFailed,
-		Message:     "failed to parse data rows",
+		Line:    3,
+		Message: "failed to parse data rows",
 	}
 	ErrParseFailedContent = &Error{
-		Category:    CategoryParse,
-		SubCategory: ParseFailed,
-		Message:     "error reading file content",
+		Line:    1,
+		Message: "failed to parse file content",
 	}
-)
 
-// Format errors
-var (
-	ErrFormatMalformedColumn = &Error{
-		Category:    CategoryFormat,
-		SubCategory: FormatMalformed,
-		Message:     "expected empty line after columns",
-	}
-)
-
-// Field errors
-var (
+	// Field errors
 	ErrFieldInvalidHeader = &Error{
-		Category:    CategoryField,
-		SubCategory: FieldInvalid,
-		Message:     "invalid header field type",
+		Line:    2,
+		Message: "invalid header field type",
 	}
 )
 
 // IsCategory checks if an error belongs to a specific category
 func IsCategory(err error, category ErrorCategory) bool {
 	if aleErr, ok := err.(*Error); ok {
-		return aleErr.Category == category
+		return aleErr.Line == int(category)
 	}
 	return false
 }
@@ -134,7 +118,7 @@ func IsCategory(err error, category ErrorCategory) bool {
 // IsError checks if an error matches a specific category and subcategory
 func IsError(err error, category ErrorCategory, subCategory int32) bool {
 	if aleErr, ok := err.(*Error); ok {
-		return aleErr.Category == category && aleErr.SubCategory == subCategory
+		return aleErr.Line == int(category) && aleErr.Line == int(subCategory)
 	}
 	return false
 }
