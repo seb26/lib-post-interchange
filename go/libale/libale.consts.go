@@ -26,9 +26,9 @@ var (
 // Predefined video formats
 var (
 	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "1080"}
-	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "PAL"}
-	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "NTSC"}
-	VideoFormatRAW    = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "CUSTOM"}
+	VideoFormatPAL    = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "PAL"}
+	VideoFormatNTSC   = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "NTSC"}
+	VideoFormatCUSTOM = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "CUSTOM"}
 )
 
 // Predefined audio formats
