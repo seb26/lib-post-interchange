@@ -13,38 +13,41 @@ const ALEDataWord = "Data"
 // to the end of the Data section including subsequent blank line.
 const ALEHeadingWordPattern = `(?ms)^Heading(\r?\n|\r)(?P<fields>.*)(\r?\n|\r)(\r?\n|\r)Column(\r?\n|\r)(?P<columns>.*)(\r?\n|\r)(\r?\n|\r)(?P<data_header>Data)$`
 
-// ALE video formats
-//const (
-//	ALE_VIDEO_FORMAT_CUSTOM ALEVideoFormat = "CUSTOM"
-//	ALE_VIDEO_FORMAT_1080   ALEVideoFormat = "1080"
-//)
-// TODO: add PAL, NTSC, and gather other possibilities
+// Predefined frame rates
+// TODO - DROPFRAMES
+var (
+	FrameRate23976 = ALEFrameRate{Key: "FPS", Value: "23.976"}
+	FrameRate24    = ALEFrameRate{Key: "FPS", Value: "24"}
+	FrameRate25    = ALEFrameRate{Key: "FPS", Value: "25"}
+	FrameRate2997  = ALEFrameRate{Key: "FPS", Value: "29.97"}
+	FrameRate30    = ALEFrameRate{Key: "FPS", Value: "30"}
+	FrameRate48    = ALEFrameRate{Key: "FPS", Value: "48"}
+	FrameRate50    = ALEFrameRate{Key: "FPS", Value: "50"}
+	FrameRate5994  = ALEFrameRate{Key: "FPS", Value: "59.94"}
+	FrameRate60    = ALEFrameRate{Key: "FPS", Value: "60"}
+)
 
-// ALE audio formats
-//const (
-//	ALE_AUDIO_FORMAT_CUSTOM ALEAudioFormat = "CUSTOM"
-//	ALE_AUDIO_FORMAT_48KHZ  ALEAudioFormat = "48kHz"
-//	ALE_AUDIO_FORMAT_NONE   ALEAudioFormat = "NONE"
-//)
-// TODO: add 44khz and others
+// Predefined video formats
+var (
+	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "1080"}
+	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "PAL"}
+	VideoFormatHD1080 = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "NTSC"}
+	VideoFormatRAW    = ALEVideoFormat{Key: "VIDEO_FORMAT", Value: "CUSTOM"}
+)
 
-// ALE frame rates
-//const (
-//	ALE_FRAME_RATE_CUSTOM ALEFrameRate = iota
-//	ALE_FRAME_RATE_60
-//	ALE_FRAME_RATE_5994_NDF
-//	ALE_FRAME_RATE_5994_DF
-//	ALE_FRAME_RATE_50
-//	ALE_FRAME_RATE_48
-//	ALE_FRAME_RATE_30_NDF
-//	ALE_FRAME_RATE_30_DF
-//	ALE_FRAME_RATE_2997_NDF
-//	ALE_FRAME_RATE_2997_DF
-//	ALE_FRAME_RATE_25
-//	ALE_FRAME_RATE_24
-//	ALE_FRAME_RATE_23976
-//)
+// Predefined audio formats
+var (
+	AudioFormatPCM48   = ALEAudioFormat{Key: "AUDIO_FORMAT", Value: "48kHz"}
+)
 
-// TODO: HEADER FIELDS TO ADD
-// 'TAPE' - string, any custom string tape name
-// 'FILM_FORMAT' - string, "35 mm"
+// Predefined field delimiters
+var (
+	FieldDelimiterTab   = ALEFieldDelimiter{Key: "FIELD_DELIM", Value: "TABS"}
+)
+
+// Predefined film formats
+var (
+	FilmFormat16mm = ALEFilmFormat{Key: "FILM_FORMAT", Value: "16 mm"}
+	FilmFormat35mm = ALEFilmFormat{Key: "FILM_FORMAT", Value: "35 mm"}
+	FilmFormat65mm = ALEFilmFormat{Key: "FILM_FORMAT", Value: "65 mm"}
+)
