@@ -1,7 +1,9 @@
 // Package format provides predefined format constants and helpers for ALE files.
 package format
 
-import "lib-post-interchange/libale/types"
+import (
+	"lib-post-interchange/libale/types"
+)
 
 // Section headers
 const (

@@ -272,3 +272,93 @@ func (o Object) String() string {
 
 	return fmt.Sprintf(format, args...)
 }
+
+// Validate validates an ALE Object and its components.
+func (o *Object) Validate() error {
+	if o == nil {
+		return fmt.Errorf("object is nil")
+	}
+
+	// Validate required header fields
+	if o.FieldDelimiter.GetValue() == "" {
+		return fmt.Errorf("field delimiter is required")
+	}
+
+	// Validate columns
+	if err := o.ValidateColumns(); err != nil {
+		return fmt.Errorf("invalid columns: %w", err)
+	}
+
+	// Validate rows
+	for i, row := range o.Rows {
+		if err := row.Validate(o.Columns); err != nil {
+			return fmt.Errorf("invalid row %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+// ValidateColumns validates the Object's columns.
+func (o *Object) ValidateColumns() error {
+	if len(o.Columns) == 0 {
+		return fmt.Errorf("no columns defined")
+	}
+
+	// Check for duplicate names and validate order sequence
+	seen := make(map[string]bool)
+	orderSeen := make(map[int]bool)
+	for _, col := range o.Columns {
+		if col.Name == "" {
+			return fmt.Errorf("empty column name")
+		}
+		if seen[col.Name] {
+			return fmt.Errorf("duplicate column name: %s", col.Name)
+		}
+		seen[col.Name] = true
+
+		if orderSeen[col.Order] {
+			return fmt.Errorf("duplicate column order: %d", col.Order)
+		}
+		orderSeen[col.Order] = true
+	}
+
+	// Verify order sequence starts at 0 and is continuous
+	for i := 0; i < len(o.Columns); i++ {
+		if !orderSeen[i] {
+			return fmt.Errorf("missing column order: %d", i)
+		}
+	}
+
+	return nil
+}
+
+// Validate validates a Row against the provided columns.
+func (r Row) Validate(columns []Column) error {
+	if len(r.Columns) != len(columns) {
+		return fmt.Errorf("row columns count (%d) does not match object columns count (%d)", len(r.Columns), len(columns))
+	}
+
+	// Check that all columns have values
+	for _, col := range columns {
+		if _, ok := r.ValueMap[col]; !ok {
+			return fmt.Errorf("missing value for column %s", col.Name)
+		}
+	}
+
+	// Check for extra values
+	for col := range r.ValueMap {
+		found := false
+		for _, objCol := range columns {
+			if col.Name == objCol.Name && col.Order == objCol.Order {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("extra value for column %s", col.Name)
+		}
+	}
+
+	return nil
+}
