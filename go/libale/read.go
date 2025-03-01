@@ -3,7 +3,6 @@ package libale
 import (
 	"bufio"
 	"encoding/csv"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -48,7 +47,7 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 
 	// First line should be "Heading"
 	if !scanner.Scan() || scanner.Text() != "Heading" {
-		return nil, nil, nil, fmt.Errorf("missing Heading section")
+		return nil, nil, nil, ErrSectionMissingHeading
 	}
 
 	// Read header fields until empty line
@@ -64,7 +63,7 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 	// Parse header fields
 	fieldsArray, err := readTSVData(headerData.String())
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse header fields: %w", err)
+		return nil, nil, nil, ErrParseFailedHeader
 	}
 	for _, field := range fieldsArray {
 		if len(field) != 2 {
@@ -74,24 +73,24 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 		value := field[1]
 		constructor, err := ToType(key)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, ErrFieldInvalidHeader
 		}
 		headerFields = append(headerFields, constructor(value))
 	}
 
 	// Next line should be "Column"
 	if !scanner.Scan() || scanner.Text() != "Column" {
-		return nil, nil, nil, fmt.Errorf("missing Column section")
+		return nil, nil, nil, ErrSectionMissingColumn
 	}
 
 	// Read column names
 	if !scanner.Scan() {
-		return nil, nil, nil, fmt.Errorf("missing column names")
+		return nil, nil, nil, ErrSectionIncompleteColumn
 	}
 	columnsLine := scanner.Text()
 	columnsArray, err := readTSVDataFirstLine(columnsLine)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse columns: %w", err)
+		return nil, nil, nil, ErrParseFailedColumns
 	}
 	for index, column := range columnsArray {
 		columns = append(columns, makeALEColumn(column, index))
@@ -99,12 +98,12 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 
 	// Skip empty line
 	if !scanner.Scan() || scanner.Text() != "" {
-		return nil, nil, nil, fmt.Errorf("expected empty line after columns")
+		return nil, nil, nil, ErrFormatMalformedColumn
 	}
 
 	// Next line should be "Data"
 	if !scanner.Scan() || scanner.Text() != "Data" {
-		return nil, nil, nil, fmt.Errorf("missing Data section")
+		return nil, nil, nil, ErrSectionMissingData
 	}
 
 	// Read all data rows
@@ -118,13 +117,13 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, nil, nil, fmt.Errorf("error reading file: %w", err)
+		return nil, nil, nil, ErrParseFailedContent
 	}
 
 	// Parse data rows
 	dataRows, err := readTSVData(dataBuilder.String())
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse data rows: %w", err)
+		return nil, nil, nil, ErrParseFailedData
 	}
 	rows := makeALERowsFromDataRows(dataRows, columns)
 
