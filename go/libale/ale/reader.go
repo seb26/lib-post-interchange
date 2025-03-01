@@ -88,6 +88,9 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 		return nil, nil, nil, ErrSectionIncompleteColumn
 	}
 	columnsLine := scanner.Text()
+	if columnsLine == "" {
+		return nil, nil, nil, ErrParseEmptyInput.WithContext("no column data provided")
+	}
 	columnsArray, err := readTSVDataFirstLine(columnsLine)
 	if err != nil {
 		return nil, nil, nil, ErrParseFailedColumns
@@ -96,8 +99,8 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 		columns = append(columns, makeColumn(column, index))
 	}
 
-	// Skip empty line
-	if !scanner.Scan() || scanner.Text() != "" {
+	// Skip empty line (but don't require it)
+	if scanner.Scan() && scanner.Text() != "" {
 		return nil, nil, nil, ErrFormatMalformedColumn
 	}
 
@@ -125,29 +128,38 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	if err != nil {
 		return nil, nil, nil, ErrParseFailedData
 	}
-	rows := makeRowsFromDataRows(dataRows, columns)
+	rows, err := makeRowsFromDataRows(dataRows, columns)
+	if err != nil {
+		return nil, nil, nil, ErrParseFailedRows
+	}
 
 	return headerFields, columns, rows, nil
 }
 
 // readTSVData handles the parsing of tab-separated value data
 func readTSVData(input string) ([][]string, error) {
+	if input == "" {
+		return nil, ErrParseEmptyInput.WithContext("no data provided")
+	}
 	reader := csv.NewReader(strings.NewReader(input))
 	reader.Comma = '\t'
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
 	}
 	return records, nil
 }
 
 // readTSVDataFirstLine uses encoding/csv's Reader but only first line
 func readTSVDataFirstLine(input string) ([]string, error) {
+	if input == "" {
+		return nil, ErrParseEmptyInput.WithContext("empty input string")
+	}
 	reader := csv.NewReader(strings.NewReader(input))
 	reader.Comma = '\t'
 	records, err := reader.Read()
 	if err != nil {
-		return nil, err
+		return nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
 	}
 	return records, nil
 }
@@ -167,23 +179,34 @@ func makeRow(row []string, columns []types.Column) types.Row {
 	var aleRow types.Row
 	aleRow.Columns = columns
 	aleRow.ValueMap = make(map[types.Column]types.Value)
-	for cellIndex, value := range row {
+
+	// Only process up to the minimum of row length and columns length
+	maxCells := len(row)
+	if len(columns) < maxCells {
+		maxCells = len(columns)
+	}
+
+	for cellIndex := 0; cellIndex < maxCells; cellIndex++ {
 		column := columns[cellIndex]
-		aleValue := makeValue(column, value)
+		aleValue := makeValue(column, row[cellIndex])
 		aleRow.ValueMap[column] = aleValue
 	}
 	return aleRow
 }
 
 // makeRowsFromDataRows is a constructor for Row, iterating over multiple data rows
-func makeRowsFromDataRows(rows [][]string, columns []types.Column) []types.Row {
+func makeRowsFromDataRows(rows [][]string, columns []types.Column) ([]types.Row, error) {
 	var aleRows []types.Row
 	for rowIndex, row := range rows {
+		// Validate row length matches column count
+		if len(row) != len(columns) {
+			return nil, ErrParseMismatchedColumns.WithContext(fmt.Sprintf("row %d has %d columns, expected %d", rowIndex, len(row), len(columns)))
+		}
 		aleRow := makeRow(row, columns)
 		aleRow.Order = rowIndex
 		aleRows = append(aleRows, aleRow)
 	}
-	return aleRows
+	return aleRows, nil
 }
 
 // assignHeaderFields assigns header fields to their specific types in the Object.
