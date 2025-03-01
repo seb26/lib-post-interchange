@@ -31,7 +31,7 @@ func main() {
 					if err != nil {
 						return cli.Exit("libale: error reading file: "+err.Error(), 1)
 					}
-					c.App.Writer.Write([]byte("cli: Output ALE: " + aleObj.String() + "\n"))
+					c.App.Writer.Write([]byte("cli: Input: " + aleObj.String() + "\n"))
 					return nil
 				},
 			},

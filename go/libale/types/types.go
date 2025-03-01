@@ -1,7 +1,10 @@
 // Package types provides core type definitions for the ALE format.
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Field defines the common behavior for all ALE field types.
 type Field interface {
@@ -85,6 +88,95 @@ type Object struct {
 
 // String returns a string representation of the Object.
 func (o Object) String() string {
-	return fmt.Sprintf("ALE{HeaderFields: %v, FieldDelimiter: %v, VideoFormat: %v, AudioFormat: %v, FPS: %v, FilmFormat: %v, Tape: %v, Columns: %v, Rows: %v}",
-		o.HeaderFields, o.FieldDelimiter, o.VideoFormat, o.AudioFormat, o.FPS, o.FilmFormat, o.Tape, len(o.Columns), len(o.Rows))
+	// Format columns and rows for display, limiting output length
+	var columnsDisplay, rowsDisplay string
+
+	if len(o.Columns) > 0 {
+		columnNames := make([]string, 0, len(o.Columns))
+		for _, col := range o.Columns {
+			columnNames = append(columnNames, col.Name)
+		}
+		if len(columnNames) > 3 {
+			columnsDisplay = fmt.Sprintf("%s, %s, %s, ...", columnNames[0], columnNames[1], columnNames[2])
+		} else {
+			columnsDisplay = strings.Join(columnNames, ", ")
+		}
+	}
+
+	if len(o.Rows) > 0 && len(o.Columns) > 0 {
+		rowValues := make([]string, 0, 1)
+		row := o.Rows[0]
+		for i := 0; i < len(o.Columns) && i < 1; i++ {
+			if val, ok := row.ValueMap[o.Columns[i]]; ok {
+				rowValues = append(rowValues, val.String())
+			}
+		}
+		if len(o.Columns) > 1 {
+			rowsDisplay = fmt.Sprintf("%s, ...", rowValues[0])
+		} else {
+			rowsDisplay = strings.Join(rowValues, ", ")
+		}
+	}
+
+	// Build the base format string
+	format := `ALE{
+    Columns: %v [%v],
+    Rows: %v [%v]`
+
+	// Add fields when they are defined
+	if o.FieldDelimiter.GetValue() != "" {
+		format += `,
+    FieldDelimiter: %v`
+	}
+	if o.VideoFormat.GetValue() != "" {
+		format += `,
+    VideoFormat: %v`
+	}
+	if o.AudioFormat.GetValue() != "" {
+		format += `,
+    AudioFormat: %v`
+	}
+	if o.FilmFormat.GetValue() != "" {
+		format += `,
+    FilmFormat: %v`
+	}
+	if o.Tape.GetValue() != "" {
+		format += `,
+    Tape: %v`
+	}
+	if o.FPS.GetValue() != "" {
+		format += `,
+    FPS: %v`
+	}
+	format += "\n}"
+
+	// Build args slice starting with required fields
+	args := []interface{}{
+		len(o.Columns),
+		columnsDisplay,
+		len(o.Rows),
+		rowsDisplay,
+	}
+
+	// Add optional fields to args if they are defined
+	if o.FieldDelimiter.GetValue() != "" {
+		args = append(args, o.FieldDelimiter.GetValue())
+	}
+	if o.VideoFormat.GetValue() != "" {
+		args = append(args, o.VideoFormat.GetValue())
+	}
+	if o.AudioFormat.GetValue() != "" {
+		args = append(args, o.AudioFormat.GetValue())
+	}
+	if o.FilmFormat.GetValue() != "" {
+		args = append(args, o.FilmFormat.GetValue())
+	}
+	if o.Tape.GetValue() != "" {
+		args = append(args, o.Tape.GetValue())
+	}
+	if o.FPS.GetValue() != "" {
+		args = append(args, o.FPS.GetValue())
+	}
+
+	return fmt.Sprintf(format, args...)
 }
