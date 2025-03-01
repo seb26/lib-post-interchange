@@ -132,7 +132,36 @@ Name	Scene
 Data
 A001	1	1
 `,
-			wantErr: true,
+			wantErr: false,
+			check: func(t *testing.T, obj *types.Object) {
+				if obj == nil {
+					t.Fatal("Expected non-nil Object")
+				}
+				if len(obj.Columns) != 2 {
+					t.Errorf("Got %d columns, want 2", len(obj.Columns))
+				}
+				if len(obj.Rows) != 1 {
+					t.Errorf("Got %d rows, want 1", len(obj.Rows))
+				}
+				// Check that extra data was ignored
+				row := obj.Rows[0]
+				if len(row.ValueMap) != 2 {
+					t.Errorf("Row has %d values, want 2", len(row.ValueMap))
+				}
+				// Verify the values we kept
+				for col, val := range row.ValueMap {
+					switch col.Name {
+					case "Name":
+						if val.String() != "A001" {
+							t.Errorf("Name = %q, want %q", val.String(), "A001")
+						}
+					case "Scene":
+						if val.String() != "1" {
+							t.Errorf("Scene = %q, want %q", val.String(), "1")
+						}
+					}
+				}
+			},
 		},
 		{
 			name:    "empty input",
@@ -294,12 +323,12 @@ func TestMakeRowsFromDataRows(t *testing.T) {
 		columns []types.Column
 		wantErr bool
 		errMsg  string
+		check   func(t *testing.T, rows []types.Row)
 	}{
 		{
 			name: "valid rows",
 			rows: [][]string{
 				{"A001", "1"},
-				{"A001", "2"},
 			},
 			columns: columns,
 			wantErr: false,
@@ -310,8 +339,30 @@ func TestMakeRowsFromDataRows(t *testing.T) {
 				{"A001", "1", "extra"},
 			},
 			columns: columns,
-			wantErr: true,
-			errMsg:  "ale: [2.4] row has mismatched column count: row 0 has 3 columns, expected 2",
+			wantErr: false,
+			check: func(t *testing.T, rows []types.Row) {
+				if len(rows) != 1 {
+					t.Errorf("Got %d rows, want 1", len(rows))
+					return
+				}
+				row := rows[0]
+				if len(row.ValueMap) != len(columns) {
+					t.Errorf("Row has %d values, want %d", len(row.ValueMap), len(columns))
+				}
+				// Verify the values we kept
+				for col, val := range row.ValueMap {
+					switch col.Name {
+					case "Name":
+						if val.String() != "A001" {
+							t.Errorf("Name = %q, want %q", val.String(), "A001")
+						}
+					case "Scene":
+						if val.String() != "1" {
+							t.Errorf("Scene = %q, want %q", val.String(), "1")
+						}
+					}
+				}
+			},
 		},
 	}
 
@@ -326,10 +377,8 @@ func TestMakeRowsFromDataRows(t *testing.T) {
 				t.Errorf("makeRowsFromDataRows() error = %v, want %v", err.Error(), tt.errMsg)
 				return
 			}
-			if !tt.wantErr {
-				if len(got) != len(tt.rows) {
-					t.Errorf("makeRowsFromDataRows() got %v rows, want %v", len(got), len(tt.rows))
-				}
+			if tt.check != nil {
+				tt.check(t, got)
 			}
 		})
 	}
@@ -452,4 +501,130 @@ func TestReadAllSampleFiles(t *testing.T) {
 	}
 	t.Logf("------------")
 	t.Logf("Total: %d, Passed: %d, Failed: %d", len(results), passed, len(results)-passed)
+}
+
+func TestMakeRow(t *testing.T) {
+	tests := []struct {
+		name    string
+		row     []string
+		columns []types.Column
+		want    map[string]string // map of column name to expected value
+	}{
+		{
+			name: "exact match of columns and values",
+			row:  []string{"A001", "1", "2"},
+			columns: []types.Column{
+				{Name: "Name", Order: 0},
+				{Name: "Scene", Order: 1},
+				{Name: "Take", Order: 2},
+			},
+			want: map[string]string{
+				"Name":  "A001",
+				"Scene": "1",
+				"Take":  "2",
+			},
+		},
+		{
+			name: "fewer values than columns",
+			row:  []string{"A001", "1"},
+			columns: []types.Column{
+				{Name: "Name", Order: 0},
+				{Name: "Scene", Order: 1},
+				{Name: "Take", Order: 2},
+			},
+			want: map[string]string{
+				"Name":  "A001",
+				"Scene": "1",
+				"Take":  "", // Should be padded with empty string
+			},
+		},
+		{
+			name: "more values than columns",
+			row:  []string{"A001", "1", "2", "extra"},
+			columns: []types.Column{
+				{Name: "Name", Order: 0},
+				{Name: "Scene", Order: 1},
+				{Name: "Take", Order: 2},
+			},
+			want: map[string]string{
+				"Name":  "A001",
+				"Scene": "1",
+				"Take":  "2",
+				// "extra" value should be ignored
+			},
+		},
+		{
+			name: "many more columns than values",
+			row:  []string{"A001", "1", "2"},
+			columns: []types.Column{
+				{Name: "Name", Order: 0},
+				{Name: "Scene", Order: 1},
+				{Name: "Take", Order: 2},
+				{Name: "Col4", Order: 3},
+				{Name: "Col5", Order: 4},
+				{Name: "Col6", Order: 5},
+				{Name: "Col7", Order: 6},
+				{Name: "Col8", Order: 7},
+				{Name: "Col9", Order: 8},
+				{Name: "Col10", Order: 9},
+			},
+			want: map[string]string{
+				"Name":  "A001",
+				"Scene": "1",
+				"Take":  "2",
+				"Col4":  "",
+				"Col5":  "",
+				"Col6":  "",
+				"Col7":  "",
+				"Col8":  "",
+				"Col9":  "",
+				"Col10": "",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := makeRow(tt.row, tt.columns)
+
+			// Check that we have all expected values
+			if len(got.ValueMap) != len(tt.columns) {
+				t.Errorf("makeRow() got %v values, want %v", len(got.ValueMap), len(tt.columns))
+			}
+
+			// Check each value matches expected
+			for col, wantVal := range tt.want {
+				var found bool
+				for c, v := range got.ValueMap {
+					if c.Name == col {
+						found = true
+						if v.String() != wantVal {
+							t.Errorf("makeRow() value for column %q = %q, want %q", col, v.String(), wantVal)
+						}
+						break
+					}
+				}
+				if !found {
+					t.Errorf("makeRow() missing value for column %q", col)
+				}
+			}
+
+			// Check column order is preserved
+			for i, col := range tt.columns {
+				found := false
+				for c := range got.ValueMap {
+					if c.Name == col.Name {
+						if c.Order != i {
+							t.Errorf("makeRow() column %q has order %d, want %d", c.Name, c.Order, i)
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("makeRow() missing column %q", col.Name)
+				}
+			}
+		})
+	}
 }

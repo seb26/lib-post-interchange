@@ -191,37 +191,49 @@ func makeValue(column types.Column, value string) types.StringValue {
 	return types.StringValue{Column: column, Value: value}
 }
 
-// makeRow is a constructor for Row.
+// makeRow creates a Row from a slice of values and column definitions.
+// If the row has fewer values than columns, the remaining columns are filled with empty strings.
+// If the row has more values than columns, the extra values are ignored.
 func makeRow(row []string, columns []types.Column) types.Row {
-	var aleRow types.Row
-	aleRow.Columns = columns
-	aleRow.ValueMap = make(map[types.Column]types.Value)
-
-	// Process all columns, padding with empty strings if row is too short
-	for i, column := range columns {
-		value := ""
-		if i < len(row) {
-			value = row[i]
-		}
-		aleValue := makeValue(column, value)
-		aleRow.ValueMap[column] = aleValue
+	aleRow := types.Row{
+		Columns:  columns,
+		ValueMap: make(map[types.Column]types.Value, len(columns)),
 	}
+
+	// Process each column in order, ensuring the column order is preserved
+	for _, column := range columns {
+		value := ""
+		if column.Order < len(row) {
+			value = row[column.Order]
+		}
+		aleRow.ValueMap[column] = makeValue(column, value)
+	}
+
 	return aleRow
 }
 
-// makeRowsFromDataRows is a constructor for Row, iterating over multiple data rows
+// makeRowsFromDataRows creates a slice of Rows from raw data rows and column definitions.
+// It handles cases where rows have more or fewer values than columns:
+// - If a row has more values than columns, continue but warn that the extra values are ignored
+// - If a row has fewer values than columns, the remaining columns are filled with empty strings
 func makeRowsFromDataRows(rows [][]string, columns []types.Column) ([]types.Row, error) {
-	var aleRows []types.Row
-	for rowIndex, row := range rows {
-		// Warn if row has more columns than defined
-		if len(row) > len(columns) {
-			fmt.Printf("Warning: row %d has %d columns, expected %d (extra columns will be ignored)\n",
-				rowIndex, len(row), len(columns))
-		}
-		aleRow := makeRow(row, columns)
-		aleRow.Order = rowIndex
-		aleRows = append(aleRows, aleRow)
+	if len(rows) == 0 {
+		return nil, nil
 	}
+
+	aleRows := make([]types.Row, len(rows))
+	for i, row := range rows {
+		// Warn about extra data that will be ignored
+		if len(row) > len(columns) {
+			fmt.Printf("Warning: row %d has %d values, expected %d (extra values will be ignored)\n",
+				i, len(row), len(columns))
+		}
+
+		aleRow := makeRow(row, columns)
+		aleRow.Order = i
+		aleRows[i] = aleRow
+	}
+
 	return aleRows, nil
 }
 

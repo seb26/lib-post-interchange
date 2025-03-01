@@ -66,7 +66,7 @@ func TestHandler_ReadFile(t *testing.T) {
 	// Test a single valid file to verify handler behavior
 	t.Run("valid file", func(t *testing.T) {
 		// Using a known good file from samples
-		obj, err := handler.ReadFile("../samples/ALE/A001R1AA_AVID.ale")
+		obj, err := handler.ReadFile("../../samples/ALE/A001R1AA_AVID.ale")
 		if err != nil {
 			t.Errorf("Handler.ReadFile() error = %v", err)
 			return
