@@ -1,4 +1,4 @@
-package libale
+package ale
 
 import "fmt"
 

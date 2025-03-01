@@ -1,8 +1,13 @@
-package libale
+// Package ale implements reading and writing of Avid Log Exchange (ALE) files.
+package ale
 
-import (
-	"lib-post-interchange/libale/ale"
-	"lib-post-interchange/libale/types"
+import "lib-post-interchange/libale/types"
+
+// Section headers
+const (
+	Heading = "Heading"
+	Column  = "Column"
+	Data    = "Data"
 )
 
 // Handler provides the main interface for interacting with ALE files.
@@ -14,13 +19,12 @@ func New() *Handler {
 	return &Handler{}
 }
 
-// ReadFile provides the main entry point for loading ALE data from the filesystem.
-// It returns a structured representation of the ALE file's contents.
+// ReadFile reads and parses an ALE file from the filesystem.
 func (h *Handler) ReadFile(filepath string) (*types.Object, error) {
-	return ale.ReadFile(filepath)
+	return ReadFile(filepath)
 }
 
-// Read serves as the primary interface for parsing ALE data from any string source.
+// Read parses ALE data from a string.
 func (h *Handler) Read(input string) (*types.Object, error) {
-	return ale.Read(input)
+	return Read(input)
 }

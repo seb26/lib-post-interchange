@@ -1,4 +1,4 @@
-package libale
+package ale
 
 import (
 	"bufio"
@@ -6,11 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"lib-post-interchange/libale/format"
 	"lib-post-interchange/libale/types"
 )
 
-// ReadFile provides the main entry point for loading ALE data from the filesystem.
-func ReadFile(filepath string) (*types.ALEObject, error) {
+// ReadFile reads and parses an ALE file from the filesystem.
+func ReadFile(filepath string) (*types.Object, error) {
 	_, err := os.Stat(filepath)
 	if os.IsNotExist(err) {
 		return nil, err
@@ -23,32 +24,31 @@ func ReadFile(filepath string) (*types.ALEObject, error) {
 	return Read(dataString)
 }
 
-// Read serves as the primary interface for parsing ALE data from any string source.
-// It coordinates the parsing process and ensures proper initialization of the ALEObject.
-func Read(input string) (*types.ALEObject, error) {
-	aleHeaderFields, aleColumns, aleRows, err := read(input)
+// Read parses ALE data from a string.
+func Read(input string) (*types.Object, error) {
+	headerFields, columns, rows, err := read(input)
 	if err != nil {
 		return nil, err
 	}
-	ale := types.ALEObject{
-		HeaderFields: aleHeaderFields,
-		Columns:      aleColumns,
-		Rows:         aleRows,
+	ale := types.Object{
+		HeaderFields: headerFields,
+		Columns:      columns,
+		Rows:         rows,
 	}
-	ale = types.AssignHeaderFieldsToObject(ale)
+	assignHeaderFields(&ale)
 	return &ale, nil
 }
 
 // read is the core parsing function that handles the ALE file format's three-part structure:
 // headers, columns, and data. It enforces the format's rules and extracts structured data.
-func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, error) {
-	var headerFields []types.ALEField
-	var columns []types.ALEColumn
+func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
+	var headerFields []types.Field
+	var columns []types.Column
 
 	scanner := bufio.NewScanner(strings.NewReader(input))
 
 	// First line should be "Heading"
-	if !scanner.Scan() || scanner.Text() != "Heading" {
+	if !scanner.Scan() || scanner.Text() != format.Heading {
 		return nil, nil, nil, ErrSectionMissingHeading
 	}
 
@@ -71,17 +71,14 @@ func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, er
 		if len(field) != 2 {
 			continue
 		}
-		key := field[0]
-		value := field[1]
-		constructor, err := types.ToType(key)
-		if err != nil {
-			return nil, nil, nil, ErrFieldInvalidHeader
-		}
-		headerFields = append(headerFields, constructor(value))
+		headerFields = append(headerFields, types.BaseField{
+			Key:   field[0],
+			Value: field[1],
+		})
 	}
 
 	// Next line should be "Column"
-	if !scanner.Scan() || scanner.Text() != "Column" {
+	if !scanner.Scan() || scanner.Text() != format.Column {
 		return nil, nil, nil, ErrSectionMissingColumn
 	}
 
@@ -95,7 +92,7 @@ func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, er
 		return nil, nil, nil, ErrParseFailedColumns
 	}
 	for index, column := range columnsArray {
-		columns = append(columns, makeALEColumn(column, index))
+		columns = append(columns, makeColumn(column, index))
 	}
 
 	// Skip empty line
@@ -104,7 +101,7 @@ func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, er
 	}
 
 	// Next line should be "Data"
-	if !scanner.Scan() || scanner.Text() != "Data" {
+	if !scanner.Scan() || scanner.Text() != format.Data {
 		return nil, nil, nil, ErrSectionMissingData
 	}
 
@@ -127,7 +124,7 @@ func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, er
 	if err != nil {
 		return nil, nil, nil, ErrParseFailedData
 	}
-	rows := makeALERowsFromDataRows(dataRows, columns)
+	rows := makeRowsFromDataRows(dataRows, columns)
 
 	return headerFields, columns, rows, nil
 }
@@ -154,36 +151,56 @@ func readTSVDataFirstLine(input string) ([]string, error) {
 	return records, nil
 }
 
-// makeALEColumn is a constructor for ALEColumn.
-func makeALEColumn(name string, order int) types.ALEColumn {
-	return types.ALEColumn{Name: name, Order: order}
+// makeColumn is a constructor for Column.
+func makeColumn(name string, order int) types.Column {
+	return types.Column{Name: name, Order: order}
 }
 
-// makeALEValue is a constructor for ALEValueString.
-func makeALEValue(column types.ALEColumn, value string) types.ALEValueString {
-	return types.ALEValueString{Column: column, Value: value}
+// makeValue is a constructor for StringValue.
+func makeValue(column types.Column, value string) types.StringValue {
+	return types.StringValue{Column: column, Value: value}
 }
 
-// makeALERow is a constructor for ALERow.
-func makeALERow(row []string, columns []types.ALEColumn) types.ALERow {
-	var aleRow types.ALERow
+// makeRow is a constructor for Row.
+func makeRow(row []string, columns []types.Column) types.Row {
+	var aleRow types.Row
 	aleRow.Columns = columns
-	aleRow.ValueMap = make(map[types.ALEColumn]types.ALEValueString)
-	for cell_index, value := range row {
-		column := columns[cell_index]
-		aleValue := makeALEValue(column, value)
+	aleRow.ValueMap = make(map[types.Column]types.Value)
+	for cellIndex, value := range row {
+		column := columns[cellIndex]
+		aleValue := makeValue(column, value)
 		aleRow.ValueMap[column] = aleValue
 	}
 	return aleRow
 }
 
-// makeALERowsFromDataRows is a constructor for ALERow, iterating over multiple data rows
-func makeALERowsFromDataRows(rows [][]string, columns []types.ALEColumn) []types.ALERow {
-	var aleRows []types.ALERow
-	for row_index, row := range rows {
-		aleRow := makeALERow(row, columns)
-		aleRow.Order = row_index
+// makeRowsFromDataRows is a constructor for Row, iterating over multiple data rows
+func makeRowsFromDataRows(rows [][]string, columns []types.Column) []types.Row {
+	var aleRows []types.Row
+	for rowIndex, row := range rows {
+		aleRow := makeRow(row, columns)
+		aleRow.Order = rowIndex
 		aleRows = append(aleRows, aleRow)
 	}
 	return aleRows
+}
+
+// assignHeaderFields assigns header fields to their specific types in the Object.
+func assignHeaderFields(ale *types.Object) {
+	for _, field := range ale.HeaderFields {
+		switch field.GetKey() {
+		case "FIELD_DELIM":
+			ale.FieldDelimiter = types.FieldDelimiter{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		case "FPS":
+			ale.FPS = types.FrameRate{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		case "AUDIO_FORMAT":
+			ale.AudioFormat = types.AudioFormat{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		case "VIDEO_FORMAT":
+			ale.VideoFormat = types.VideoFormat{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		case "FILM_FORMAT":
+			ale.FilmFormat = types.FilmFormat{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		case "TAPE":
+			ale.Tape = types.Tape{BaseField: types.BaseField{Key: field.GetKey(), Value: field.GetValue()}}
+		}
+	}
 }

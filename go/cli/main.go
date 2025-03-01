@@ -24,14 +24,14 @@ func main() {
 					c.App.Writer.Write([]byte("cli: Input file: " + inputFile + "\n"))
 
 					// Create a new ALE handler
-					handler := libale.New()
+					ale := libale.New()
 
 					// Read the ALE file
-					ale, err := handler.ReadFile(inputFile)
+					aleObj, err := ale.ReadFile(inputFile)
 					if err != nil {
 						return cli.Exit("libale: error reading file: "+err.Error(), 1)
 					}
-					c.App.Writer.Write([]byte("cli: Output ALE: " + ale.String() + "\n"))
+					c.App.Writer.Write([]byte("cli: Output ALE: " + aleObj.String() + "\n"))
 					return nil
 				},
 			},

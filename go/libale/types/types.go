@@ -1,256 +1,90 @@
-// Package types provides the core type definitions for the libale package.
-// These types represent the structure and data models of ALE (Avid Log Exchange) files.
+// Package types provides core type definitions for the ALE format.
 package types
 
 import "fmt"
 
-// ALE interface that external packages will access
-type ALE interface {
-	ALEObject
-}
-
-// ALEField interface defines the common behavior for all ALE field types
-type ALEField interface {
+// Field defines the common behavior for all ALE field types.
+type Field interface {
 	GetKey() string
 	GetValue() string
 }
 
-// ALEBaseField represents a base type for header fields
-type ALEBaseField struct {
+// BaseField represents a base type for header fields.
+type BaseField struct {
 	Key   string
 	Value string
 }
 
-// GetKey returns the key of the header field
-func (f ALEBaseField) GetKey() string {
-	return f.Key
-}
+func (f BaseField) GetKey() string   { return f.Key }
+func (f BaseField) GetValue() string { return f.Value }
 
-// GetValue returns the value of the header field
-func (f ALEBaseField) GetValue() string {
-	return f.Value
-}
+// FieldDelimiter represents the field delimiter value in the header.
+type FieldDelimiter struct{ BaseField }
 
-// ALEFieldDelimiter represents the field delimiter value in the header
-type ALEFieldDelimiter struct {
-	Key   string
-	Value string
-}
+// VideoFormat represents the video format value in the header.
+type VideoFormat struct{ BaseField }
 
-// GetKey returns the key of the field delimiter
-func (f ALEFieldDelimiter) GetKey() string {
-	return f.Key
-}
+// AudioFormat represents the audio format value in the header.
+type AudioFormat struct{ BaseField }
 
-// GetValue returns the value of the field delimiter
-func (f ALEFieldDelimiter) GetValue() string {
-	return f.Value
-}
+// FrameRate represents the framerate value in the header.
+type FrameRate struct{ BaseField }
 
-// ALEFilmFormat represents the film format value in the header
-type ALEFilmFormat struct {
-	Key   string
-	Value string
-}
+// FilmFormat represents the film format value in the header.
+type FilmFormat struct{ BaseField }
 
-// GetKey returns the key of the film format
-func (f ALEFilmFormat) GetKey() string {
-	return f.Key
-}
+// Tape represents the tape name value in the header.
+type Tape struct{ BaseField }
 
-// GetValue returns the value of the film format
-func (f ALEFilmFormat) GetValue() string {
-	return f.Value
-}
-
-// ALETape represents the tape name value in the header
-type ALETape struct {
-	Key   string
-	Value string
-}
-
-// GetKey returns the key of the tape name
-func (f ALETape) GetKey() string {
-	return f.Key
-}
-
-// GetValue returns the value of the tape name
-func (f ALETape) GetValue() string {
-	return f.Value
-}
-
-// ALEVideoFormat represents the video format value in the header
-type ALEVideoFormat struct {
-	Key   string
-	Value string
-}
-
-// GetKey returns the key of the video format
-func (f ALEVideoFormat) GetKey() string {
-	return f.Key
-}
-
-// GetValue returns the value of the video format
-func (f ALEVideoFormat) GetValue() string {
-	return f.Value
-}
-
-// ALEAudioFormat represents the audio format value in the header
-type ALEAudioFormat struct {
-	Key   string
-	Value string
-}
-
-// GetKey returns the key of the audio format
-func (f ALEAudioFormat) GetKey() string {
-	return f.Key
-}
-
-// GetValue returns the value of the audio format
-func (f ALEAudioFormat) GetValue() string {
-	return f.Value
-}
-
-// ALEFrameRate represents the framerate value in the header
-type ALEFrameRate struct {
-	Key   string
-	Value string
-}
-
-// GetKey returns the key of the frame rate
-func (f ALEFrameRate) GetKey() string {
-	return f.Key
-}
-
-// GetValue returns the value of the frame rate
-func (f ALEFrameRate) GetValue() string {
-	return f.Value
-}
-
-// ToType returns a function that creates an ALEBaseField instance
-func ToType(key string) (func(string) ALEBaseField, error) {
-	switch key {
-	case "FIELD_DELIM":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "FIELD_DELIM", Value: value}
-		}, nil
-	case "VIDEO_FORMAT":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "VIDEO_FORMAT", Value: value}
-		}, nil
-	case "AUDIO_FORMAT":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "AUDIO_FORMAT", Value: value}
-		}, nil
-	case "FPS":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "FPS", Value: value}
-		}, nil
-	case "FILM_FORMAT":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "FILM_FORMAT", Value: value}
-		}, nil
-	case "TAPE":
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: "TAPE", Value: value}
-		}, nil
-	default:
-		return func(value string) ALEBaseField {
-			return ALEBaseField{Key: key, Value: value}
-		}, nil
-	}
-}
-
-// ALEObject is a structured representation of an Avid Log Exchange file
-type ALEObject struct {
-	HeaderFields   []ALEField
-	FieldDelimiter ALEFieldDelimiter
-	VideoFormat    ALEVideoFormat
-	AudioFormat    ALEAudioFormat
-	FPS            ALEFrameRate
-	FilmFormat     ALEFilmFormat
-	Tape           ALETape
-	Columns        []ALEColumn
-	Rows           []ALERow
-}
-
-// String returns the string representation of the ALEObject
-func (ale ALEObject) String() string {
-	return fmt.Sprintf("ALEObject{HeaderFields: %v, FieldDelimiter: %v, VideoFormat: %v, AudioFormat: %v, FPS: %v, FilmFormat: %v, Tape: %v, Columns: %v, Rows: %v}",
-		ale.HeaderFields, ale.FieldDelimiter, ale.VideoFormat, ale.AudioFormat, ale.FPS, ale.FilmFormat, ale.Tape, len(ale.Columns), len(ale.Rows))
-}
-
-// AssignHeaderFieldsToObject() assigns the header fields to the outside
-// of the ALE object.
-func AssignHeaderFieldsToObject(ale ALEObject) ALEObject {
-	for _, field := range ale.HeaderFields {
-		switch field.GetKey() {
-		case "FIELD_DELIM":
-			ale.FieldDelimiter = ALEFieldDelimiter{Key: field.GetKey(), Value: field.GetValue()}
-		case "FPS":
-			ale.FPS = ALEFrameRate{Key: field.GetKey(), Value: field.GetValue()}
-		case "AUDIO_FORMAT":
-			ale.AudioFormat = ALEAudioFormat{Key: field.GetKey(), Value: field.GetValue()}
-		case "VIDEO_FORMAT":
-			ale.VideoFormat = ALEVideoFormat{Key: field.GetKey(), Value: field.GetValue()}
-		case "FILM_FORMAT":
-			ale.FilmFormat = ALEFilmFormat{Key: field.GetKey(), Value: field.GetValue()}
-		case "TAPE":
-			ale.Tape = ALETape{Key: field.GetKey(), Value: field.GetValue()}
-		}
-	}
-	return ale
-}
-
-// ALEColumn represents a column in the ALE data table
-type ALEColumn struct {
+// Column represents a column in the ALE data table.
+type Column struct {
 	Name  string
 	Order int
 }
 
-// ALERow represents a row in the ALE data table
-type ALERow struct {
-	Columns  []ALEColumn
-	ValueMap map[ALEColumn]ALEValueString
+// Row represents a row in the ALE data table.
+type Row struct {
+	Columns  []Column
+	ValueMap map[Column]Value
 	Order    int
 }
 
-// ALEValueString represents a string value
-type ALEValueString struct {
-	Column ALEColumn
+// Value represents a value in the ALE data table.
+type Value interface {
+	String() string
+}
+
+// StringValue represents a string value.
+type StringValue struct {
+	Column Column
 	Value  string
 }
 
-// String returns the string value
-func (v ALEValueString) String() string {
-	return v.Value
-}
+func (v StringValue) String() string { return v.Value }
 
-// ALEValueInt represents an int value
-type ALEValueInt struct {
-	Column ALEColumn
+// IntValue represents an integer value.
+type IntValue struct {
+	Column Column
 	Value  int
 }
 
-// String returns the string value
-func (v ALEValueInt) String() string {
-	return fmt.Sprintf("%d", v.Value)
+func (v IntValue) String() string { return fmt.Sprintf("%d", v.Value) }
+
+// Object represents a structured Avid Log Exchange file.
+type Object struct {
+	HeaderFields   []Field
+	FieldDelimiter FieldDelimiter
+	VideoFormat    VideoFormat
+	AudioFormat    AudioFormat
+	FPS            FrameRate
+	FilmFormat     FilmFormat
+	Tape           Tape
+	Columns        []Column
+	Rows           []Row
 }
 
-// GetHeader provides access to the ALE's header fields while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetHeader() []ALEField {
-	return ale.HeaderFields
-}
-
-// GetColumns provides access to the ALE's column definitions while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetColumns() []ALEColumn {
-	return ale.Columns
-}
-
-// GetRows provides access to the ALE's data rows while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetRows() []ALERow {
-	return ale.Rows
+// String returns a string representation of the Object.
+func (o Object) String() string {
+	return fmt.Sprintf("ALE{HeaderFields: %v, FieldDelimiter: %v, VideoFormat: %v, AudioFormat: %v, FPS: %v, FilmFormat: %v, Tape: %v, Columns: %v, Rows: %v}",
+		o.HeaderFields, o.FieldDelimiter, o.VideoFormat, o.AudioFormat, o.FPS, o.FilmFormat, o.Tape, len(o.Columns), len(o.Rows))
 }
