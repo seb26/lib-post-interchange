@@ -1,4 +1,6 @@
-package libale
+// Package types provides the core type definitions for the libale package.
+// These types represent the structure and data models of ALE (Avid Log Exchange) files.
+package types
 
 import "fmt"
 
@@ -233,4 +235,22 @@ type ALEValueInt struct {
 // String returns the string value
 func (v ALEValueInt) String() string {
 	return fmt.Sprintf("%d", v.Value)
+}
+
+// GetHeader provides access to the ALE's header fields while maintaining encapsulation
+// of the internal ALEObject structure.
+func (ale *ALEObject) GetHeader() []ALEField {
+	return ale.HeaderFields
+}
+
+// GetColumns provides access to the ALE's column definitions while maintaining encapsulation
+// of the internal ALEObject structure.
+func (ale *ALEObject) GetColumns() []ALEColumn {
+	return ale.Columns
+}
+
+// GetRows provides access to the ALE's data rows while maintaining encapsulation
+// of the internal ALEObject structure.
+func (ale *ALEObject) GetRows() []ALERow {
+	return ale.Rows
 }

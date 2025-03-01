@@ -5,10 +5,12 @@ import (
 	"encoding/csv"
 	"os"
 	"strings"
+
+	"lib-post-interchange/libale/types"
 )
 
 // ReadFile provides the main entry point for loading ALE data from the filesystem.
-func ReadFile(filepath string) (*ALEObject, error) {
+func ReadFile(filepath string) (*types.ALEObject, error) {
 	_, err := os.Stat(filepath)
 	if os.IsNotExist(err) {
 		return nil, err
@@ -23,25 +25,25 @@ func ReadFile(filepath string) (*ALEObject, error) {
 
 // Read serves as the primary interface for parsing ALE data from any string source.
 // It coordinates the parsing process and ensures proper initialization of the ALEObject.
-func Read(input string) (*ALEObject, error) {
+func Read(input string) (*types.ALEObject, error) {
 	aleHeaderFields, aleColumns, aleRows, err := read(input)
 	if err != nil {
 		return nil, err
 	}
-	ale := ALEObject{
+	ale := types.ALEObject{
 		HeaderFields: aleHeaderFields,
 		Columns:      aleColumns,
 		Rows:         aleRows,
 	}
-	ale = AssignHeaderFieldsToObject(ale)
+	ale = types.AssignHeaderFieldsToObject(ale)
 	return &ale, nil
 }
 
 // read is the core parsing function that handles the ALE file format's three-part structure:
 // headers, columns, and data. It enforces the format's rules and extracts structured data.
-func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
-	var headerFields []ALEField
-	var columns []ALEColumn
+func read(input string) ([]types.ALEField, []types.ALEColumn, []types.ALERow, error) {
+	var headerFields []types.ALEField
+	var columns []types.ALEColumn
 
 	scanner := bufio.NewScanner(strings.NewReader(input))
 
@@ -71,7 +73,7 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 		}
 		key := field[0]
 		value := field[1]
-		constructor, err := ToType(key)
+		constructor, err := types.ToType(key)
 		if err != nil {
 			return nil, nil, nil, ErrFieldInvalidHeader
 		}
@@ -130,24 +132,6 @@ func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 	return headerFields, columns, rows, nil
 }
 
-// GetHeader provides access to the ALE's header fields while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetHeader() []ALEField {
-	return ale.HeaderFields
-}
-
-// GetColumns provides access to the ALE's column definitions while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetColumns() []ALEColumn {
-	return ale.Columns
-}
-
-// GetRows provides access to the ALE's data rows while maintaining encapsulation
-// of the internal ALEObject structure.
-func (ale *ALEObject) GetRows() []ALERow {
-	return ale.Rows
-}
-
 // readTSVData handles the parsing of tab-separated value data
 func readTSVData(input string) ([][]string, error) {
 	reader := csv.NewReader(strings.NewReader(input))
@@ -171,20 +155,20 @@ func readTSVDataFirstLine(input string) ([]string, error) {
 }
 
 // makeALEColumn is a constructor for ALEColumn.
-func makeALEColumn(name string, order int) ALEColumn {
-	return ALEColumn{Name: name, Order: order}
+func makeALEColumn(name string, order int) types.ALEColumn {
+	return types.ALEColumn{Name: name, Order: order}
 }
 
 // makeALEValue is a constructor for ALEValueString.
-func makeALEValue(column ALEColumn, value string) ALEValueString {
-	return ALEValueString{Column: column, Value: value}
+func makeALEValue(column types.ALEColumn, value string) types.ALEValueString {
+	return types.ALEValueString{Column: column, Value: value}
 }
 
 // makeALERow is a constructor for ALERow.
-func makeALERow(row []string, columns []ALEColumn) ALERow {
-	var aleRow ALERow
+func makeALERow(row []string, columns []types.ALEColumn) types.ALERow {
+	var aleRow types.ALERow
 	aleRow.Columns = columns
-	aleRow.ValueMap = make(map[ALEColumn]ALEValueString)
+	aleRow.ValueMap = make(map[types.ALEColumn]types.ALEValueString)
 	for cell_index, value := range row {
 		column := columns[cell_index]
 		aleValue := makeALEValue(column, value)
@@ -194,8 +178,8 @@ func makeALERow(row []string, columns []ALEColumn) ALERow {
 }
 
 // makeALERowsFromDataRows is a constructor for ALERow, iterating over multiple data rows
-func makeALERowsFromDataRows(rows [][]string, columns []ALEColumn) []ALERow {
-	var aleRows []ALERow
+func makeALERowsFromDataRows(rows [][]string, columns []types.ALEColumn) []types.ALERow {
+	var aleRows []types.ALERow
 	for row_index, row := range rows {
 		aleRow := makeALERow(row, columns)
 		aleRow.Order = row_index
