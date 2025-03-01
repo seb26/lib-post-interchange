@@ -3,7 +3,7 @@ package ale
 import (
 	"testing"
 
-	"lib-post-interchange/libale/ale/testutil"
+	"lib-post-interchange/libale/internal/testutil"
 	"lib-post-interchange/libale/types"
 )
 
