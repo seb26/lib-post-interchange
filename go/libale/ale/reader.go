@@ -93,7 +93,10 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	}
 	columnsArray, err := readTSVDataFirstLine(columnsLine)
 	if err != nil {
-		return nil, nil, nil, ErrParseFailedColumns
+		if _, ok := err.(*Error); ok {
+			return nil, nil, nil, err // Pass through our custom errors
+		}
+		return nil, nil, nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
 	}
 	for index, column := range columnsArray {
 		columns = append(columns, makeColumn(column, index))
@@ -120,17 +123,20 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, nil, nil, ErrParseFailedContent
+		return nil, nil, nil, ErrParseFailedContent.WithContext(fmt.Sprintf("scanner error: %v", err))
 	}
 
 	// Parse data rows
 	dataRows, err := readTSVData(dataBuilder.String())
 	if err != nil {
-		return nil, nil, nil, ErrParseFailedData
+		if _, ok := err.(*Error); ok {
+			return nil, nil, nil, err // Pass through our custom errors
+		}
+		return nil, nil, nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
 	}
 	rows, err := makeRowsFromDataRows(dataRows, columns)
 	if err != nil {
-		return nil, nil, nil, ErrParseFailedRows
+		return nil, nil, nil, err
 	}
 
 	return headerFields, columns, rows, nil
@@ -145,7 +151,10 @@ func readTSVData(input string) ([][]string, error) {
 	reader.Comma = '\t'
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, ErrParseEmptyInput.WithContext("no data rows provided")
 	}
 	return records, nil
 }
@@ -159,7 +168,7 @@ func readTSVDataFirstLine(input string) ([]string, error) {
 	reader.Comma = '\t'
 	records, err := reader.Read()
 	if err != nil {
-		return nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
+		return nil, err
 	}
 	return records, nil
 }
