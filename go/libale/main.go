@@ -45,9 +45,9 @@ func Read(input string) (*ALEObject, error) {
 	return &ale, nil
 }
 
-func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
+func read(input string) ([]ALEField, []ALEColumn, []ALERow, error) {
 	var columns []ALEColumn
-	var headerFields []ALEHeaderField
+	var headerFields []ALEField
 
 	// Find the ALE header
 	pattern := regexp.MustCompile(ALEHeadingWordPattern)
@@ -97,7 +97,7 @@ func read(input string) ([]ALEHeaderField, []ALEColumn, []ALERow, error) {
 }
 
 // GetHeader() returns the header fields of the ALE object
-func (ale *ALEObject) GetHeader() []ALEHeaderField {
+func (ale *ALEObject) GetHeader() []ALEField {
 	return ale.HeaderFields
 }
 
