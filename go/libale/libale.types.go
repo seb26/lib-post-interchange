@@ -2,6 +2,11 @@ package libale
 
 import "fmt"
 
+// ALE interface that external packages will access
+type ALE interface {
+	ALEObject
+}
+
 // ALEField interface defines the common behavior for all ALE field types
 type ALEField interface {
 	GetKey() string
