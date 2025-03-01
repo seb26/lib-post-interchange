@@ -22,7 +22,12 @@ func main() {
 					}
 					inputFile := c.Args().Get(0)
 					c.App.Writer.Write([]byte("cli: Input file: " + inputFile + "\n"))
-					ale, err := libale.ReadFile(inputFile)
+
+					// Create a new ALE handler
+					handler := libale.New()
+
+					// Read the ALE file
+					ale, err := handler.ReadFile(inputFile)
 					if err != nil {
 						return cli.Exit("libale: error reading file: "+err.Error(), 1)
 					}
