@@ -18,7 +18,7 @@ func formatError(op string, err error) error {
 func main() {
 	app := &cli.App{
 		Name:  "libale-go-cli",
-		Usage: "A CLI to read and write ALE files",
+		Usage: "CLI to read and write ALE files",
 		Commands: []*cli.Command{
 			{
 				Name:  "read",
