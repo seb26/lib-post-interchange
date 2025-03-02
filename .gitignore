@@ -28,3 +28,6 @@ go.work
 # binaries
 go/cli/cli
 go/main
+
+# private sample files
+private/
