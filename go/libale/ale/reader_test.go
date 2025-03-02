@@ -1,6 +1,8 @@
 package ale
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 
 	"lib-post-interchange/libale/internal/testutil"
@@ -250,65 +252,6 @@ func TestReadFile(t *testing.T) {
 	}
 }
 
-func TestReadTSVData(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		want    [][]string
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name: "valid tsv data",
-			input: `A001	1	1
-A001	1	2`,
-			want: [][]string{
-				{"A001", "1", "1"},
-				{"A001", "1", "2"},
-			},
-			wantErr: false,
-		},
-		{
-			name:    "empty input",
-			input:   "",
-			want:    nil,
-			wantErr: true,
-			errMsg:  "ale: [2.3] empty input: no data provided",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := readTSVData(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("readTSVData() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr && err.Error() != tt.errMsg {
-				t.Errorf("readTSVData() error = %v, want %v", err.Error(), tt.errMsg)
-				return
-			}
-			if !tt.wantErr {
-				if len(got) != len(tt.want) {
-					t.Errorf("readTSVData() got %v rows, want %v", len(got), len(tt.want))
-					return
-				}
-				for i := range got {
-					if len(got[i]) != len(tt.want[i]) {
-						t.Errorf("Row %d: got %v columns, want %v", i, len(got[i]), len(tt.want[i]))
-						continue
-					}
-					for j := range got[i] {
-						if got[i][j] != tt.want[i][j] {
-							t.Errorf("Row %d, Col %d: got %v, want %v", i, j, got[i][j], tt.want[i][j])
-						}
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestMakeRowsFromDataRows(t *testing.T) {
 	columns := []types.Column{
 		{Name: "Name", Order: 0},
@@ -506,6 +449,110 @@ func TestMakeRow(t *testing.T) {
 				}
 				if !found {
 					t.Errorf("makeRow() missing column %q", col.Name)
+				}
+			}
+		})
+	}
+}
+
+func TestReadTSVLine(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    []string
+		wantErr bool
+	}{
+		{
+			name:    "empty input",
+			input:   "",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "single column",
+			input:   "value",
+			want:    []string{"value"},
+			wantErr: false,
+		},
+		{
+			name:    "multiple columns",
+			input:   "col1\tcol2\tcol3",
+			want:    []string{"col1", "col2", "col3"},
+			wantErr: false,
+		},
+		{
+			name:    "columns with spaces",
+			input:   "Name with spaces\tScene (Special)\tNotes & Comments",
+			want:    []string{"Name with spaces", "Scene (Special)", "Notes & Comments"},
+			wantErr: false,
+		},
+		{
+			name:    "column values with preceding and trailing quote marks",
+			input:   "Name\t\"Quoted Value\"\tNormal",
+			want:    []string{"Name", `"Quoted Value"`, "Normal"},
+			wantErr: false,
+		},
+		{
+			name:    "trailing tab",
+			input:   "col1\tcol2\t",
+			want:    []string{"col1", "col2", ""},
+			wantErr: false,
+		},
+		{
+			name:    "column values containing mismatched quote marks",
+			input:   `"a word"	"1"2"	a"	"b`,
+			want:    []string{`"a word"`, `"1"2"`, `a"`, `"b`},
+			wantErr: false,
+		},
+		{
+			name:    "multiple consecutive tabs",
+			input:   "col1\t\t\tcol2",
+			want:    []string{"col1", "", "", "col2"},
+			wantErr: false,
+		},
+		{
+			name:    "leading tab",
+			input:   "\tcol1\tcol2",
+			want:    []string{"", "col1", "col2"},
+			wantErr: false,
+		},
+		{
+			name:    "special characters",
+			input:   "!@#$%\t&*()_+\t[]{};:'",
+			want:    []string{"!@#$%", "&*()_+", "[]{};:'"},
+			wantErr: false,
+		},
+		{
+			name:    "unicode characters",
+			input:   "🌟\t你好\tcafé",
+			want:    []string{"🌟", "你好", "café"},
+			wantErr: false,
+		},
+		{
+			name:    "only tabs",
+			input:   "\t\t\t",
+			want:    []string{"", "", "", ""},
+			wantErr: false,
+		},
+		{
+			name:    "very long field",
+			input:   "short\t" + strings.Repeat("a", 1000) + "\tshort",
+			want:    []string{"short", strings.Repeat("a", 1000), "short"},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := readTSVLine(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("readTSVLine() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				t.Logf("\nReadAll() output:\ngot  %q\nwant %q", got, tt.want)
+				if !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("\nReadAll() output:\ngot  %q\nwant %q", got, tt.want)
 				}
 			}
 		})

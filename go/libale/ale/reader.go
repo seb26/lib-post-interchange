@@ -2,11 +2,11 @@ package ale
 
 import (
 	"bufio"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"strings"
 
+	"lib-post-interchange/libale/errors"
 	"lib-post-interchange/libale/format"
 	"lib-post-interchange/libale/types"
 )
@@ -50,7 +50,7 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 
 	// First line should be "Heading"
 	if !scanner.Scan() || scanner.Text() != format.Heading {
-		return nil, nil, nil, ErrSectionMissingHeading
+		return nil, nil, nil, errors.ErrInputMissingHeading
 	}
 
 	// Read header fields until empty line
@@ -81,7 +81,7 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 
 	// Next line should be "Column"
 	if !scanner.Scan() || scanner.Text() != format.Column {
-		return nil, nil, nil, ErrSectionMissingColumn
+		return nil, nil, nil, errors.ErrInputMissingColumn
 	}
 
 	// Skip any empty lines before column names
@@ -92,14 +92,14 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 		}
 		columnsLine := line
 		if columnsLine == format.Data {
-			return nil, nil, nil, ErrSectionIncompleteColumn
+			return nil, nil, nil, errors.ErrInputIncompleteColumn
 		}
-		columnsArray, err := readTSVDataFirstLine(columnsLine)
+		columnsArray, err := readTSVLine(columnsLine)
 		if err != nil {
-			if _, ok := err.(*Error); ok {
+			if _, ok := err.(*errors.Error); ok {
 				return nil, nil, nil, err // Pass through our custom errors
 			}
-			return nil, nil, nil, ErrParseFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
+			return nil, nil, nil, errors.ErrInputFailedColumns.WithContext(fmt.Sprintf("csv error: %v", err))
 		}
 		for index, column := range columnsArray {
 			columns = append(columns, makeColumn(column, index))
@@ -108,7 +108,7 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	}
 
 	if len(columns) == 0 {
-		return nil, nil, nil, ErrSectionIncompleteColumn
+		return nil, nil, nil, errors.ErrInputIncompleteColumn
 	}
 
 	// Skip empty lines until we find "Data" or data content
@@ -124,22 +124,26 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 			continue
 		}
 		if !foundData {
-			return nil, nil, nil, ErrSectionMissingData
+			return nil, nil, nil, errors.ErrInputMissingData
 		}
 
 		// Parse data row
-		dataRow, err := readTSVDataFirstLine(line)
+		dataRow, err := readTSVLine(line)
 		if err != nil {
-			if _, ok := err.(*Error); ok {
+			if _, ok := err.(*errors.Error); ok {
 				return nil, nil, nil, err // Pass through our custom errors
 			}
-			return nil, nil, nil, ErrParseFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
+			return nil, nil, nil, errors.ErrInputFailedData.WithContext(fmt.Sprintf("csv error: %v", err))
 		}
 		dataRows = append(dataRows, dataRow)
 	}
 
-	if !foundData || len(dataRows) == 0 {
-		return nil, nil, nil, ErrSectionMissingData
+	if !foundData {
+		return nil, nil, nil, errors.ErrInputMissingData
+	}
+
+	if len(dataRows) == 0 {
+		return nil, nil, nil, errors.ErrInputMissingData
 	}
 
 	rows, err := makeRowsFromDataRows(dataRows, columns)
@@ -150,35 +154,24 @@ func read(input string) ([]types.Field, []types.Column, []types.Row, error) {
 	return headerFields, columns, rows, nil
 }
 
-// readTSVData handles the parsing of tab-separated value data
-func readTSVData(input string) ([][]string, error) {
+// readTSVLine parses a TSV line into fields
+func readTSVLine(input string) ([]string, error) {
 	if input == "" {
-		return nil, ErrParseEmptyInput.WithContext("no data provided")
+		return nil, errors.ErrInputEmpty.WithContext("empty input string")
 	}
-	reader := csv.NewReader(strings.NewReader(input))
-	reader.Comma = '\t'
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, ErrParseEmptyInput.WithContext("no data rows provided")
-	}
-	return records, nil
-}
 
-// readTSVDataFirstLine uses encoding/csv's Reader but only first line
-func readTSVDataFirstLine(input string) ([]string, error) {
-	if input == "" {
-		return nil, ErrParseEmptyInput.WithContext("empty input string")
+	fields := make([]string, 0, 1)
+	fieldStart := 0
+	for i := 0; i < len(input); i++ {
+		if input[i] == '\t' {
+			fields = append(fields, input[fieldStart:i])
+			fieldStart = i + 1
+		}
 	}
-	reader := csv.NewReader(strings.NewReader(input))
-	reader.Comma = '\t'
-	records, err := reader.Read()
-	if err != nil {
-		return nil, err
-	}
-	return records, nil
+	// Add final field
+	fields = append(fields, input[fieldStart:])
+
+	return fields, nil
 }
 
 // makeColumn is a constructor for Column.

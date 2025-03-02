@@ -16,12 +16,19 @@ type ReadFileTestFunc func(string) (*types.Object, error)
 // TestALEFiles runs comprehensive tests on all ALE files in the samples directory
 func TestALEFiles(t *testing.T, readFileFn ReadFileTestFunc) {
 	// Find all .ale files in samples directory
-	pattern := "../../../samples/ALE/*/*.ale"
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		t.Fatalf("Failed to glob sample files: %v", err)
+	var testFiles []string
+	sampleFilesPaths := []string{
+		"../../../samples/ALE/*.ale",
+		"../../../samples/ALE/private/*.ale",
 	}
-	if len(matches) == 0 {
+	for _, sampleFilesPath := range sampleFilesPaths {
+		files, err := filepath.Glob(sampleFilesPath)
+		if err != nil {
+			t.Fatalf("Failed to glob sample files: %v", err)
+		}
+		testFiles = append(testFiles, files...)
+	}
+	if len(testFiles) == 0 {
 		t.Fatalf("No .ale files found in samples directory")
 	}
 
@@ -31,10 +38,10 @@ func TestALEFiles(t *testing.T, readFileFn ReadFileTestFunc) {
 		passed bool
 		err    error
 	}
-	results := make([]testResult, 0, len(matches))
+	results := make([]testResult, 0, len(testFiles))
 
 	// Test each sample file
-	for _, filePath := range matches {
+	for _, filePath := range testFiles {
 		result := testResult{path: filePath}
 
 		t.Run(filepath.Base(filePath), func(t *testing.T) {
