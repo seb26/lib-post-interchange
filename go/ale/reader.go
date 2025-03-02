@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"lib-post-interchange/libale/errors"
-	"lib-post-interchange/libale/format"
-	"lib-post-interchange/libale/types"
+	"ale/errors"
+	"ale/format"
+	"ale/types"
 )
 
 // ReadFile reads and parses an ALE file from the filesystem.

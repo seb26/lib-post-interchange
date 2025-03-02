@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"lib-post-interchange/libale/types"
+	"ale/types"
 )
 
 func TestWriteMatchesSample(t *testing.T) {
 	// Read the sample file
-	ale, err := ReadFile("../../../samples/ALE/A001R1AA_AVID.ale")
+	ale, err := ReadFile("internal/testdata/basic.ale")
 	if err != nil {
 		t.Fatalf("Failed to read sample file: %v", err)
 	}

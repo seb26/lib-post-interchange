@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"lib-post-interchange/libale/errors"
-	"lib-post-interchange/libale/format"
-	"lib-post-interchange/libale/types"
+	"ale/errors"
+	"ale/format"
+	"ale/types"
 )
 
 // WriteFile writes an ALE object to a file at the specified path.

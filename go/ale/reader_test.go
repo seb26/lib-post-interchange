@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"lib-post-interchange/libale/internal/testutil"
-	"lib-post-interchange/libale/types"
+	"ale/internal/testutil"
+	"ale/types"
 )
 
 func TestRead(t *testing.T) {
@@ -193,12 +193,12 @@ func TestReadFile(t *testing.T) {
 	}{
 		{
 			name:     "non-existent file",
-			filepath: "../../../samples/ALE/nonexistent.ale",
+			filepath: "internal/testdata/nonexistent.ale",
 			wantErr:  true,
 		},
 		{
 			name:     "valid sample file",
-			filepath: "../../../samples/ALE/A001R1AA_AVID.ale",
+			filepath: "internal/testdata/basic.ale",
 			wantErr:  false,
 			check: func(t *testing.T, obj *types.Object) {
 				if obj == nil {

@@ -2,7 +2,7 @@
 package format
 
 import (
-	"lib-post-interchange/libale/types"
+	"ale/types"
 )
 
 // Section headers

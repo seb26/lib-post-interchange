@@ -1,8 +1,7 @@
-package libale
+package ale
 
 import (
-	"lib-post-interchange/libale/ale"
-	"lib-post-interchange/libale/types"
+	"ale/types"
 )
 
 // Handler provides the main interface for interacting with ALE files.
@@ -17,10 +16,10 @@ func New() *Handler {
 // ReadFile provides the main entry point for loading ALE data from the filesystem.
 // It returns a structured representation of the ALE file's contents.
 func (h *Handler) ReadFile(filepath string) (*types.Object, error) {
-	return ale.ReadFile(filepath)
+	return ReadFile(filepath)
 }
 
 // Read serves as the primary interface for parsing ALE data from any string source.
 func (h *Handler) Read(input string) (*types.Object, error) {
-	return ale.Read(input)
+	return Read(input)
 }

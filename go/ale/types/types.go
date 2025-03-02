@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"lib-post-interchange/libale/errors"
+	"ale/errors"
 )
 
 // Field defines the common behavior for all ALE field types.

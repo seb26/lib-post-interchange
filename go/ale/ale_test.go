@@ -1,4 +1,4 @@
-package libale
+package ale
 
 import (
 	"testing"
@@ -57,7 +57,7 @@ func TestHandler_ReadFile(t *testing.T) {
 
 	// Test non-existent file
 	t.Run("non-existent file", func(t *testing.T) {
-		_, err := handler.ReadFile("testdata/nonexistent.ale")
+		_, err := handler.ReadFile("internal/testdata/nonexistent.ale")
 		if err == nil {
 			t.Error("Expected error for non-existent file")
 		}
@@ -66,7 +66,7 @@ func TestHandler_ReadFile(t *testing.T) {
 	// Test a single valid file to verify handler behavior
 	t.Run("valid file", func(t *testing.T) {
 		// Using a known good file from samples
-		obj, err := handler.ReadFile("../../samples/ALE/A001R1AA_AVID.ale")
+		obj, err := handler.ReadFile("internal/testdata/basic.ale")
 		if err != nil {
 			t.Errorf("Handler.ReadFile() error = %v", err)
 			return

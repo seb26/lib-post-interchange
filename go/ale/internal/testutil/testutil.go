@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"lib-post-interchange/libale/types"
+	"ale/types"
 )
 
 // ReadFileTestFunc represents a function that reads an ALE file and returns a parsed object
@@ -18,8 +18,8 @@ func TestALEFiles(t *testing.T, readFileFn ReadFileTestFunc) {
 	// Find all .ale files in samples directory
 	var testFiles []string
 	sampleFilesPaths := []string{
-		"../../../samples/ALE/*.ale",
-		"../../../samples/ALE/private/*.ale",
+		"../../samples/ALE/*.ale",
+		"../../samples/ALE/private/*.ale",
 	}
 	for _, sampleFilesPath := range sampleFilesPaths {
 		files, err := filepath.Glob(sampleFilesPath)
