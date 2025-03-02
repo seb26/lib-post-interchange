@@ -1,6 +1,7 @@
 package ale
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -28,6 +29,170 @@ func TestWriteMatchesSample(t *testing.T) {
 
 	// Compare the two ALE objects
 	compareALEObjects(t, ale, outputAle)
+}
+
+func TestWriteColumnOrderPreservation(t *testing.T) {
+	// Create ALE object with specifically ordered columns
+	ale := &types.Object{
+		HeaderFields: []types.Field{
+			types.FieldDelimiter{BaseField: types.BaseField{Key: "FIELD_DELIM", Value: "TABS"}},
+		},
+		Columns: []types.Column{
+			{Name: "Last", Order: 2},
+			{Name: "First", Order: 0},
+			{Name: "Middle", Order: 1},
+		},
+		Rows: []types.Row{
+			{
+				Columns: []types.Column{
+					{Name: "Last", Order: 2},
+					{Name: "First", Order: 0},
+					{Name: "Middle", Order: 1},
+				},
+				ValueMap: map[types.Column]types.Value{
+					{Name: "Last", Order: 2}: types.StringValue{
+						Column: types.Column{Name: "Last", Order: 2},
+						Value:  "C",
+					},
+					{Name: "First", Order: 0}: types.StringValue{
+						Column: types.Column{Name: "First", Order: 0},
+						Value:  "A",
+					},
+					{Name: "Middle", Order: 1}: types.StringValue{
+						Column: types.Column{Name: "Middle", Order: 1},
+						Value:  "B",
+					},
+				},
+			},
+		},
+	}
+
+	// Write and read back
+	output, err := Write(ale)
+	if err != nil {
+		t.Fatalf("Failed to write ALE object: %v", err)
+	}
+
+	// Verify the raw output has columns in correct order
+	lines := strings.Split(output, "\n")
+	var columnLine string
+	for _, line := range lines {
+		if strings.Contains(line, "First\tMiddle\tLast") {
+			columnLine = line
+			break
+		}
+	}
+	if columnLine == "" {
+		t.Fatal("Column line not found in output")
+	}
+	expectedOrder := "First\tMiddle\tLast"
+	if columnLine != expectedOrder {
+		t.Errorf("Column order not preserved in output:\nExpected: %q\nGot: %q", expectedOrder, columnLine)
+	}
+
+	// Read back and verify structure
+	outputAle, err := Read(output)
+	if err != nil {
+		t.Fatalf("Failed to read written output: %v", err)
+	}
+
+	// Verify column order in parsed object
+	for i, expectedName := range []string{"First", "Middle", "Last"} {
+		if outputAle.Columns[i].Name != expectedName {
+			t.Errorf("Column %d: expected name %q, got %q", i, expectedName, outputAle.Columns[i].Name)
+		}
+		if outputAle.Columns[i].Order != i {
+			t.Errorf("Column %q: expected order %d, got %d", expectedName, i, outputAle.Columns[i].Order)
+		}
+	}
+}
+
+func TestWriteRowOrderPreservation(t *testing.T) {
+	// Create ALE object with specifically ordered rows
+	ale := &types.Object{
+		HeaderFields: []types.Field{
+			types.FieldDelimiter{BaseField: types.BaseField{Key: "FIELD_DELIM", Value: "TABS"}},
+		},
+		Columns: []types.Column{
+			{Name: "Name", Order: 0},
+			{Name: "Value", Order: 1},
+		},
+	}
+
+	// Create 5 rows with distinct values
+	rows := make([]types.Row, 5)
+	for i := 0; i < 5; i++ {
+		rows[i] = types.Row{
+			Order: i,
+			Columns: []types.Column{
+				{Name: "Name", Order: 0},
+				{Name: "Value", Order: 1},
+			},
+			ValueMap: map[types.Column]types.Value{
+				{Name: "Name", Order: 0}: types.StringValue{
+					Column: types.Column{Name: "Name", Order: 0},
+					Value:  fmt.Sprintf("Name%d", i),
+				},
+				{Name: "Value", Order: 1}: types.StringValue{
+					Column: types.Column{Name: "Value", Order: 1},
+					Value:  fmt.Sprintf("Value%d", i),
+				},
+			},
+		}
+	}
+	ale.Rows = rows
+
+	// Write and read back
+	output, err := Write(ale)
+	if err != nil {
+		t.Fatalf("Failed to write ALE object: %v", err)
+	}
+
+	// Verify the raw output has rows in correct order
+	lines := strings.Split(output, "\n")
+	var dataLines []string
+	inDataSection := false
+	for _, line := range lines {
+		if line == "Data" {
+			inDataSection = true
+			continue
+		}
+		if inDataSection && line != "" {
+			dataLines = append(dataLines, line)
+		}
+	}
+
+	// Check raw output order
+	for i, line := range dataLines {
+		expected := fmt.Sprintf("Name%d\tValue%d", i, i)
+		if line != expected {
+			t.Errorf("Row %d: expected %q, got %q", i, expected, line)
+		}
+	}
+
+	// Read back and verify structure
+	outputAle, err := Read(output)
+	if err != nil {
+		t.Fatalf("Failed to read written output: %v", err)
+	}
+
+	// Verify row order in parsed object
+	for i, row := range outputAle.Rows {
+		nameVal := row.ValueMap[types.Column{Name: "Name", Order: 0}].String()
+		valueVal := row.ValueMap[types.Column{Name: "Value", Order: 1}].String()
+		expectedName := fmt.Sprintf("Name%d", i)
+		expectedValue := fmt.Sprintf("Value%d", i)
+
+		if nameVal != expectedName {
+			t.Errorf("Row %d: expected name %q, got %q", i, expectedName, nameVal)
+		}
+		if valueVal != expectedValue {
+			t.Errorf("Row %d: expected value %q, got %q", i, expectedValue, valueVal)
+		}
+		if row.Order != i {
+			t.Errorf("Row with values (%q, %q): expected order %d, got %d", nameVal, valueVal, i, row.Order)
+		}
+	}
 }
 
 func compareALEObjects(t *testing.T, expected, actual *types.Object) {

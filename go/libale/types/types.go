@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"lib-post-interchange/libale/validate"
+	"lib-post-interchange/libale/errors"
 )
 
 // Field defines the common behavior for all ALE field types.
@@ -93,10 +93,10 @@ type Object struct {
 func (o Object) MarshalJSON() ([]byte, error) {
 	// Validate required fields
 	if o.Columns == nil {
-		return nil, validate.ErrValueNilColumns
+		return nil, errors.ErrOutputNilColumns
 	}
 	if o.Rows == nil {
-		return nil, validate.ErrValueNilRows
+		return nil, errors.ErrOutputNilRows
 	}
 
 	type jsonObject struct {
@@ -127,7 +127,7 @@ func (o Object) MarshalJSON() ([]byte, error) {
 	columns := make([]string, len(o.Columns))
 	for i, col := range o.Columns {
 		if col.Name == "" {
-			return nil, validate.ErrValueEmptyColumnName
+			return nil, errors.ErrOutputEmptyColumnName
 		}
 		columns[i] = col.Name
 	}
@@ -136,7 +136,7 @@ func (o Object) MarshalJSON() ([]byte, error) {
 	data := make([]map[string]string, len(o.Rows))
 	for i, row := range o.Rows {
 		if row.ValueMap == nil {
-			return nil, validate.ErrValueNilRowMap
+			return nil, errors.ErrOutputNilRowMap
 		}
 		rowData := make(map[string]string)
 		for col, val := range row.ValueMap {

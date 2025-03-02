@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"lib-post-interchange/libale/errors"
 	"lib-post-interchange/libale/format"
 	"lib-post-interchange/libale/types"
 )
@@ -21,7 +22,7 @@ func WriteFile(filepath string, ale *types.Object) error {
 // Write converts an ALE object to its string representation in ALE format.
 func Write(ale *types.Object) (string, error) {
 	if ale == nil {
-		return "", fmt.Errorf("cannot write nil ALE object")
+		return "", errors.ErrOutputNilObject
 	}
 
 	var builder strings.Builder
