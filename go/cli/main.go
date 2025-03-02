@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"lib-post-interchange/libale"
+	"ale"
 
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +17,7 @@ func formatError(op string, err error) error {
 
 func main() {
 	app := &cli.App{
-		Name:  "libale-go-cli",
+		Name:  "golang-ale-cli",
 		Usage: "CLI to read and write ALE files",
 		Commands: []*cli.Command{
 			{
@@ -49,7 +49,7 @@ func main() {
 					fmt.Fprintf(c.App.Writer, "cli: Input file: %s\n", inputFile)
 
 					// Create a new ALE handler
-					handler := libale.New()
+					handler := ale.New()
 
 					// Read the ALE file
 					aleObj, err := handler.ReadFile(inputFile)
@@ -70,7 +70,7 @@ func main() {
 						c.App.Writer.Write([]byte("\n"))
 					} else {
 						// Write string representation
-						fmt.Fprintf(c.App.Writer, "cli: Output ALE: %s\n", aleObj.String())
+						fmt.Fprintf(c.App.Writer, "cli: Input ALE object: %s\n", aleObj.String())
 					}
 					return nil
 				},
